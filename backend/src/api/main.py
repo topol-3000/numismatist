@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
+from api.routes import router
+from database import database
 from settings import settings
 from utils.logger import get_logger
 
@@ -17,6 +19,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     logger.info('Starting API server')
     yield
     logger.info('Gracefully shutdown API server')
+    await database.close()
 
 
 app = FastAPI(
@@ -25,6 +28,9 @@ app = FastAPI(
     version=settings.api.version,
     default_response=ORJSONResponse,
 )
+
+
+app.include_router(router)
 
 
 app.add_middleware(

@@ -5,12 +5,16 @@ name = "pypi"
 
 [packages]
 fastapi = "~=0.115"
-granian = "*"
-pydantic-settings = "*"
+granian = "~=2.3"
+pydantic-settings = "~=2.9"
+sqlalchemy = {extras = ["asyncio"], version = "~=2.0"}
+fastapi-users = {extras = ["sqlalchemy"], version = "~=14.0"}
+alembic = "~=1.16"
+asyncpg = "~=0.30"
 
 [dev-packages]
 pytest = "~=8.4.0"
-granian = {extras = ["reload"], version = "*"}
+granian = {extras = ["reload"], version = "~=2.3"}
 
 [requires]
 python_version = "3.12"

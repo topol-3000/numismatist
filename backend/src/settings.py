@@ -31,6 +31,12 @@ class DatabaseSettings(BaseModel):
         return f'postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}'
 
 
+class AccessTokenSettings(BaseModel):
+    lifetime_seconds: int = Field(default=3600, ge=300, le=86400)  # must be 5 min - 24 hours
+    reset_password_token_secret: str
+    verification_token_secret: str
+
+
 class LogLevel(str, Enum):
     DEBUG = 'DEBUG'
     INFO = 'INFO'
@@ -44,6 +50,7 @@ class LoggerSettings(BaseModel):
 
 
 class Settings(BaseSettings):
+    access_token: AccessTokenSettings
     api: APISettings = APISettings()
     database: DatabaseSettings
     logger: LoggerSettings = LoggerSettings()

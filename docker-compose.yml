@@ -1,7 +1,7 @@
 name: numismatist
 
 services:
-  api:
+  numismatist_api:
     build:
       context: backend
     env_file:
@@ -13,12 +13,12 @@ services:
     volumes:
       - ./backend/src:/app
     depends_on:
-      db:
+      numismatist_db:
         condition: service_healthy
     networks:
       - numismatist_net
 
-  migrations:
+  numismatist_migrations:
     build:
       context: backend
     env_file:
@@ -27,12 +27,12 @@ services:
     volumes:
       - ./backend/src:/app
     depends_on:
-      db:
+      numismatist_db:
         condition: service_healthy
     networks:
       - numismatist_net
 
-  dev-tools:
+  numismatist_dev_tools:
     build:
       context: backend
     env_file:
@@ -43,7 +43,7 @@ services:
     networks:
       - numismatist_net
 
-  db:
+  numismatist_db:
     image: postgres:17.2-alpine3.20
     env_file:
       - backend/.env
@@ -51,6 +51,8 @@ services:
       POSTGRES_USER: backend_pg_user
       POSTGRES_PASSWORD: backend_pg_password
       POSTGRES_DB: backend_pg_database
+    ports:
+      - "5437:5432"
     volumes:
       - numismatist_pg-data:/var/lib/postgres/data
     healthcheck:
