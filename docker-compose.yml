@@ -1,0 +1,68 @@
+name: numismatist
+
+services:
+  api:
+    build:
+      context: backend
+    env_file:
+      - backend/.env
+    command:
+      sh -c "granian --interface asgi api.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8099:8000"
+    volumes:
+      - ./backend/src:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - numismatist_net
+
+  migrations:
+    build:
+      context: backend
+    env_file:
+      - backend/.env
+    profiles: [ "tools" ]
+    volumes:
+      - ./backend/src:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - numismatist_net
+
+  dev-tools:
+    build:
+      context: backend
+    env_file:
+      - backend/.env
+    profiles: [ "tools" ]
+    volumes:
+      - ./backend/src:/app
+    networks:
+      - numismatist_net
+
+  db:
+    image: postgres:17.2-alpine3.20
+    env_file:
+      - backend/.env
+    environment:
+      POSTGRES_USER: backend_pg_user
+      POSTGRES_PASSWORD: backend_pg_password
+      POSTGRES_DB: backend_pg_database
+    volumes:
+      - numismatist_pg-data:/var/lib/postgres/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d backend_pg_database -U backend_pg_user" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - numismatist_net
+
+volumes:
+  numismatist_pg-data:
+
+networks:
+  numismatist_net:
