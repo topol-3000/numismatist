@@ -1,6 +1,21 @@
 from enum import StrEnum
 
 
+class Material(StrEnum):
+    GOLD = 'gold'
+    SILVER = 'silver'
+    COPPER = 'copper'
+    BRONZE = 'bronze'
+    NICKEL = 'nickel'
+    ALUMINUM = 'aluminum'
+    BRASS = 'brass'
+    PLATINUM = 'platinum'
+    STEEL = 'steel'
+    ZINC = 'zinc'
+    TIN = 'tin'
+    LEAD = 'lead'
+
+
 class ErrorCode(StrEnum):
     UNKNOWN_ERROR = '000001'
 
