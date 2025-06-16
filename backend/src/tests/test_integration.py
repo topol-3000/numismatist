@@ -3,11 +3,11 @@ import pytest
 from fastapi import status
 
 
-class TestIntegrationWorkflows:
-    """Integration tests for complete application workflows."""
+class TestGeneralWorkflow:
+    """Integration tests for numismatic application workflows including user journeys, collection management, and system reliability."""
     
-    def test_user_journey_workflow(self, authenticated_client, test_session):
-        """Complete user workflow: register -> create items -> update -> delete -> verify."""
+    def test_complete_numismatic_collection_lifecycle(self, authenticated_client, test_session):
+        """Test complete numismatic workflow: user registration -> coin collection creation -> item management -> collection verification."""
         # Register user
         response = authenticated_client.post("/api/auth/register", json={
             "email": "journey@example.com", "password": "securepassword123"
@@ -50,8 +50,8 @@ class TestIntegrationWorkflows:
         assert final_items[0]["id"] == item1["id"]
         assert final_items[0]["description"] == "Updated description"
     
-    def test_multiple_items_operations(self, authenticated_client, test_user):
-        """Create multiple items, update all, verify consistency."""
+    def test_bulk_coin_collection_management(self, authenticated_client, test_user):
+        """Test bulk operations on coin collection: create multiple coins, batch updates, and collection consistency."""
         # Create 3 items
         items_data = [
             {"name": "Coin A", "year": "2024", "material": "gold"},
@@ -83,8 +83,8 @@ class TestIntegrationWorkflows:
         for i in range(3):
             assert f"Updated description {i}" in descriptions
     
-    def test_error_handling(self, authenticated_client, test_user):
-        """Test error handling: invalid data, non-existent resources, system recovery."""
+    def test_api_error_handling_and_system_resilience(self, authenticated_client, test_user):
+        """Test comprehensive error handling: invalid coin data, non-existent resources, and system recovery capabilities."""
         # Invalid item data
         invalid_responses = [
             authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold"}),
@@ -111,8 +111,8 @@ class TestIntegrationWorkflows:
         })
         assert valid_response.status_code == status.HTTP_201_CREATED
     
-    def test_data_consistency(self, authenticated_client, test_user):
-        """Test data consistency: create -> verify -> update -> verify -> delete -> verify."""
+    def test_coin_data_consistency_across_operations(self, authenticated_client, test_user):
+        """Test data consistency across CRUD operations: create -> read -> update -> read -> delete with cross-validation."""
         # Create item
         item_data = {
             "name": "Consistency Test Coin", "year": "2024", 
