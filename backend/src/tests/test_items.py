@@ -4,19 +4,24 @@ from fastapi import status
 
 
 class TestItemsEndpoints:
-    """Test items CRUD operations."""
+    """Test numismatic items CRUD operations and data validation."""
 
-    def test_get_user_items_empty(self, authenticated_client, test_user):
-        """Test getting items for user with no items."""
-
+    def test_empty_collection(self, authenticated_client, test_user):
+        """
+        Flow: GET /api/items/ with no items in collection
+        Expected: 200 OK with empty array []
+        """
         response = authenticated_client.get("/api/items/")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data == []
 
-    def test_get_user_items_with_data(self, authenticated_client, test_user, test_item):
-        """Test getting items for user with items."""
+    def test_list_items(self, authenticated_client, test_user, test_item):
+        """
+        Flow: GET /api/items/ when user has items
+        Expected: 200 OK with array containing user's items (name and ID match test_item)
+        """
         response = authenticated_client.get("/api/items/")
 
         assert response.status_code == status.HTTP_200_OK
@@ -25,9 +30,11 @@ class TestItemsEndpoints:
         assert data[0]["name"] == test_item.name
         assert data[0]["id"] == str(test_item.id)
 
-    def test_get_specific_item(self, authenticated_client, test_user, test_item):
-        """Test getting a specific item by ID."""
-
+    def test_get_item_by_id(self, authenticated_client, test_user, test_item):
+        """
+        Flow: GET /api/items/{id} for existing item
+        Expected: 200 OK with complete item details (name, year, material, weight)
+        """
         response = authenticated_client.get(f"/api/items/{test_item.id}")
 
         assert response.status_code == status.HTTP_200_OK
@@ -38,16 +45,20 @@ class TestItemsEndpoints:
         assert data["weight"] == test_item.weight
 
     def test_get_nonexistent_item(self, authenticated_client, test_user):
-        """Test getting a non-existent item."""
-
+        """
+        Flow: GET /api/items/nonexistent-id
+        Expected: 404 Not Found with "Item not found" in error detail
+        """
         response = authenticated_client.get("/api/items/nonexistent-id")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Item not found" in response.json()["detail"]
 
-    def test_create_item_valid_data(self, authenticated_client, test_user):
-        """Test creating a new item with valid data."""
-
+    def test_create_item_complete_data(self, authenticated_client, test_user):
+        """
+        Flow: POST /api/items/ with complete item data (name, year, description, material, weight)
+        Expected: 201 Created with all fields preserved, user_id set, auto-generated ID
+        """        
         item_data = {
             "name": "Gold Eagle",
             "year": "2023",
@@ -68,8 +79,10 @@ class TestItemsEndpoints:
         assert "id" in data
 
     def test_create_item_minimal_data(self, authenticated_client, test_user):
-        """Test creating item with minimal required data."""
-
+        """
+        Flow: POST /api/items/ with only required fields (name, year, material)
+        Expected: 201 Created with optional fields (description, weight) as null
+        """
         item_data = {
             "name": "Simple Coin",
             "year": "2024",
@@ -85,8 +98,10 @@ class TestItemsEndpoints:
         assert data["weight"] is None
 
     def test_create_item_invalid_material(self, authenticated_client, test_user):
-        """Test creating item with invalid material."""
-
+        """
+        Flow: POST /api/items/ with invalid material enum value ("unobtainium")
+        Expected: 422 Unprocessable Entity due to material validation
+        """
         item_data = {
             "name": "Invalid Coin",
             "year": "2024",
@@ -97,9 +112,11 @@ class TestItemsEndpoints:
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_create_item_missing_required_fields(self, authenticated_client, test_user):
-        """Test creating item with missing required fields."""
-
+    def test_create_item_missing_fields(self, authenticated_client, test_user):
+        """
+        Flow: POST /api/items/ with missing required fields (only name provided)
+        Expected: 422 Unprocessable Entity due to missing year and material
+        """
         item_data = {
             "name": "Incomplete Coin"
             # Missing year and material
@@ -109,9 +126,11 @@ class TestItemsEndpoints:
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_update_item_partial(self, authenticated_client, test_user, test_item):
-        """Test updating item with partial data."""
-
+    def test_partial_update_item(self, authenticated_client, test_user, test_item):
+        """
+        Flow: PUT /api/items/{id} with partial data (description, weight only)
+        Expected: 200 OK with updated fields changed, other fields unchanged
+        """
         update_data = {
             "description": "Updated description",
             "weight": 15.0
@@ -127,9 +146,11 @@ class TestItemsEndpoints:
         assert data["name"] == test_item.name
         assert data["year"] == test_item.year
 
-    def test_update_item_full(self, authenticated_client, test_user, test_item):
-        """Test updating item with full data."""
-
+    def test_complete_update_item(self, authenticated_client, test_user, test_item):
+        """
+        Flow: PUT /api/items/{id} with all fields updated
+        Expected: 200 OK with all fields matching new values
+        """
         update_data = {
             "name": "Updated Coin Name",
             "year": "2025",
@@ -149,8 +170,10 @@ class TestItemsEndpoints:
         assert data["weight"] == update_data["weight"]
 
     def test_update_nonexistent_item(self, authenticated_client, test_user):
-        """Test updating a non-existent item."""
-
+        """
+        Flow: PUT /api/items/nonexistent-id with update data
+        Expected: 404 Not Found
+        """
         update_data = {"name": "New Name"}
 
         response = authenticated_client.put("/api/items/nonexistent-id", json=update_data)
@@ -158,8 +181,10 @@ class TestItemsEndpoints:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_item(self, authenticated_client, test_user, test_item):
-        """Test deleting an item."""
-
+        """
+        Flow: DELETE /api/items/{id} -> verify with GET /api/items/{id}
+        Expected: 204 No Content, then 404 Not Found on verification
+        """
         response = authenticated_client.delete(f"/api/items/{test_item.id}")
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -169,14 +194,19 @@ class TestItemsEndpoints:
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_nonexistent_item(self, authenticated_client, test_user):
-        """Test deleting a non-existent item."""
-
+        """
+        Flow: DELETE /api/items/nonexistent-id
+        Expected: 404 Not Found
+        """
         response = authenticated_client.delete("/api/items/nonexistent-id")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_unauthorized_access(self, client):
-        """Test accessing items endpoints without authentication."""
+    def test_unauthenticated_access(self, client):
+        """
+        Flow: Access all item endpoints without authentication
+        Expected: All return 401 Unauthorized (GET, POST, PUT, DELETE)
+        """
         # Test all endpoints without authentication
 
         response = client.get("/api/items/")
@@ -196,11 +226,13 @@ class TestItemsEndpoints:
 
 
 class TestItemsWorkflows:
-    """Test complete item management workflows."""
+    """Test comprehensive item management workflows and user journeys."""
 
-    def test_complete_item_lifecycle(self, authenticated_client, test_user):
-        """Test complete item lifecycle: create, read, update, delete."""
-
+    def test_item_lifecycle(self, authenticated_client, test_user):
+        """
+        Flow: Create item -> read item -> update item -> delete item -> verify deletion
+        Expected: All CRUD operations succeed (201 -> 200 -> 200 -> 204 -> 404)
+        """
         # Step 1: Create item
         create_data = {
             "name": "Lifecycle Coin",
@@ -242,7 +274,10 @@ class TestItemsWorkflows:
         assert final_read.status_code == status.HTTP_404_NOT_FOUND
 
     def test_user_isolation(self, authenticated_client, test_user, test_session):
-        """Test that users can only access their own items."""
+        """
+        Flow: Create item -> verify it appears in user's list and can be accessed individually
+        Expected: User can only see their own items, proper ownership isolation
+        """
         # Create item as authenticated user
         create_data = {
             "name": "User 1 Coin",
@@ -267,8 +302,10 @@ class TestItemsWorkflows:
         assert get_response.status_code == status.HTTP_200_OK
 
     def test_bulk_operations(self, authenticated_client, test_user):
-        """Test creating and managing multiple items."""
-
+        """
+        Flow: Create 3 items -> verify list shows all 3 ordered by name -> delete all -> verify empty list
+        Expected: Bulk operations work correctly, collection state properly managed
+        """
         # Create multiple items
         items_data = [
             {"name": "Coin 1", "year": "2020", "material": "gold"},

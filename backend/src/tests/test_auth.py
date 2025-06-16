@@ -6,8 +6,11 @@ from fastapi import status
 class TestAuthEndpoints:
     """Test authentication workflows."""
     
-    def test_register_new_user(self, client):
-        """Test user registration."""
+    def test_user_registration(self, client):
+        """
+        Flow: POST /api/auth/register with valid email and password
+        Expected: 201 Created, user created with is_active=True, is_verified=False, no password in response
+        """
         user_data = {
             "email": "newuser@example.com",
             "password": "testpassword123"
@@ -23,8 +26,11 @@ class TestAuthEndpoints:
         assert data["is_verified"] is False
         assert "password" not in data
     
-    def test_register_duplicate_email(self, client):
-        """Test registration with existing email fails."""
+    def test_registration_duplicate_email(self, client):
+        """
+        Flow: Register user -> attempt registration with same email
+        Expected: First succeeds (201), second fails (400 Bad Request)
+        """
         user_data = {
             "email": "duplicate@example.com",
             "password": "testpassword123"
@@ -38,8 +44,11 @@ class TestAuthEndpoints:
         response2 = client.post("/api/auth/register", json=user_data)
         assert response2.status_code == status.HTTP_400_BAD_REQUEST
     
-    def test_register_invalid_email(self, client):
-        """Test registration with invalid email."""
+    def test_registration_invalid_email(self, client):
+        """
+        Flow: POST /api/auth/register with invalid email format
+        Expected: 422 Unprocessable Entity due to email validation failure
+        """
         user_data = {
             "email": "invalid-email",
             "password": "testpassword123"
@@ -48,8 +57,11 @@ class TestAuthEndpoints:
         response = client.post("/api/auth/register", json=user_data)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     
-    def test_register_weak_password(self, client):
-        """Test registration with weak password (currently allowed)."""
+    def test_registration_weak_password(self, client):
+        """
+        Flow: POST /api/auth/register with very short password ("123")
+        Expected: 201 Created (current behavior, TODO: add password strength validation)
+        """
         user_data = {
             "email": "user@example.com",
             "password": "123"  # Short password - currently accepted
@@ -62,8 +74,12 @@ class TestAuthEndpoints:
         data = response.json()
         assert data["email"] == user_data["email"]
     
-    def test_login_valid_credentials(self, client):
-        """Test login with valid credentials."""
+    def test_user_login(self, client):
+        """
+        Flow: Register user -> login with correct credentials
+        Expected: Login succeeds (200/204/202 depending on auth strategy)
+        Note: Response varies by fastapi-users configuration (JWT/cookie/bearer auth)
+        """
         # First register a user
         user_data = {
             "email": "login@example.com",
@@ -79,12 +95,14 @@ class TestAuthEndpoints:
         
         response = client.post("/api/auth/login", data=login_data)
         
-        # Note: This might return different status codes depending on fastapi-users configuration
-        # Common responses: 200 (with token), 204 (cookie-based), or 202 (pending verification)
+        # Note: Response codes vary by fastapi-users auth strategy configuration
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT, status.HTTP_202_ACCEPTED]
     
     def test_login_invalid_credentials(self, client):
-        """Test login with invalid credentials."""
+        """
+        Flow: POST /api/auth/login with non-existent email and wrong password
+        Expected: 400 Bad Request (doesn't reveal if email exists for security)
+        """
         login_data = {
             "username": "nonexistent@example.com",
             "password": "wrongpassword"
@@ -94,18 +112,27 @@ class TestAuthEndpoints:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
     
     def test_login_missing_credentials(self, client):
-        """Test login with missing credentials."""
+        """
+        Flow: POST /api/auth/login with empty request body
+        Expected: 422 Unprocessable Entity due to missing required fields
+        """
         response = client.post("/api/auth/login", data={})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     
-    def test_logout_endpoint_exists(self, client):
-        """Test that logout endpoint exists."""
+    def test_logout_authentication_required(self, client):
+        """
+        Flow: POST /api/auth/logout without authentication
+        Expected: 401 Unauthorized (endpoint exists but requires valid session)
+        """
         response = client.post("/api/auth/logout")
         # Should return 401 for unauthenticated user
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
     
-    def test_forgot_password_endpoint(self, client):
-        """Test forgot password endpoint."""
+    def test_password_reset_existing_user(self, client):
+        """
+        Flow: Register user -> request password reset for that email
+        Expected: 202 Accepted (reset process initiated, email would be sent)
+        """
         # First register a user
         user_data = {
             "email": "forgot@example.com",
@@ -120,9 +147,12 @@ class TestAuthEndpoints:
         
         response = client.post("/api/auth/forgot-password", json=reset_data)
         assert response.status_code == status.HTTP_202_ACCEPTED
-    
-    def test_forgot_password_nonexistent_email(self, client):
-        """Test forgot password with nonexistent email."""
+
+    def test_password_reset_nonexistent_user(self, client):
+        """
+        Flow: POST /api/auth/forgot-password with non-existent email
+        Expected: 202 Accepted (same as valid email to prevent email enumeration attacks)
+        """
         reset_data = {
             "email": "nonexistent@example.com"
         }
@@ -133,10 +163,13 @@ class TestAuthEndpoints:
 
 
 class TestAuthWorkflows:
-    """Test complete authentication workflows."""
+    """Test complete authentication workflows and user journeys."""
     
-    def test_complete_registration_flow(self, client):
-        """Test complete user registration workflow."""
+    def test_registration_login_workflow(self, client):
+        """
+        Flow: Register new user -> attempt login with same credentials
+        Expected: Registration succeeds (201), login may succeed or require verification (200/204/400)
+        """
         # Step 1: Register new user
         user_data = {
             "email": "workflow@example.com",
@@ -166,7 +199,10 @@ class TestAuthWorkflows:
         ]
     
     def test_password_reset_workflow(self, client):
-        """Test password reset workflow."""
+        """
+        Flow: Register user -> request password reset
+        Expected: Both steps succeed (201, 202). Full reset requires email token handling (not tested)
+        """
         # Step 1: Register user
         user_data = {
             "email": "reset@example.com",
@@ -186,8 +222,12 @@ class TestAuthWorkflows:
         # Note: In a real test, you'd need to extract the reset token from email
         # and test the actual password reset endpoint with the token
     
-    def test_multiple_login_attempts(self, client):
-        """Test multiple failed login attempts."""
+    def test_multiple_failed_logins(self, client):
+        """
+        Flow: Register user -> 3 failed login attempts -> successful login
+        Expected: All failed attempts return 400, final correct attempt succeeds
+        Note: No account lockout implemented (current behavior)
+        """
         # Register user
         user_data = {
             "email": "multiple@example.com",
