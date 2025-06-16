@@ -14,7 +14,7 @@ RED = \033[0;31m
 RESET = \033[0m
 
 # Define all phony targets (targets that don't produce a file with the target's name)
-.PHONY: help setup up build down build-up clean prepare-env-files
+.PHONY: help setup up build down build-up clean prepare-env-files test
 
 # Default target when just 'make' is executed
 .DEFAULT_GOAL := help
@@ -36,6 +36,9 @@ help:
 	@echo "  ${GREEN}make migrate-up n=...${RESET}      - Run n migrations up"
 	@echo "  ${GREEN}make migrate-down-previous${RESET} - Revert last migration"
 	@echo "  ${GREEN}make migrate-down n=...${RESET}    - Revert n migrations"
+	@echo ""
+	@echo "${CYAN}Testing Commands:${RESET}"
+	@echo "  ${GREEN}make test${RESET}                   - Run all tests"
 	@echo ""
 	@echo "${CYAN}Setup Commands:${RESET}"
 	@echo "  ${GREEN}make prepare-env-files${RESET}     - Create environment files"
@@ -112,3 +115,10 @@ prepare-env-files:
 
 setup: prepare-env-files build-up migrate-up-latest
 	@echo "${GREEN}Setup complete!${RESET}"
+
+# =================================================
+# TESTING COMMANDS
+# =================================================
+test:
+	@echo "${CYAN}Running all tests...${RESET}"
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && python -m pytest tests/ -v"
