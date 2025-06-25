@@ -11,7 +11,6 @@ from .mixins.uuid_pk import UuidPkMixin
 
 if TYPE_CHECKING:
     from .user import User
-    from .collection import Collection
 
 
 class Item(Base, UuidPkMixin):
@@ -27,11 +26,5 @@ class Item(Base, UuidPkMixin):
     # Foreign key to user
     user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'), nullable=False)
     
-    # Relationships
+    # Relationship to user
     user: Mapped['User'] = relationship('User', back_populates='items')
-    collections: Mapped[list['Collection']] = relationship(
-        'Collection', 
-        secondary='collection_items', 
-        back_populates='items',
-        lazy='select'
-    )
