@@ -6,8 +6,11 @@ from fastapi import status
 class TestGeneralWorkflow:
     """Integration tests for numismatic application workflows including user journeys, collection management, and system reliability."""
     
-    def test_complete_numismatic_collection_lifecycle(self, authenticated_client, test_session):
-        """Test complete numismatic workflow: user registration -> coin collection creation -> item management -> collection verification."""
+    def test_user_collection_lifecycle(self, authenticated_client, test_session):
+        """
+        Flow: Register user -> create items -> update item -> delete item -> verify final state
+        Expected: All operations succeed with proper status codes and data consistency maintained
+        """
         # Register user
         response = authenticated_client.post("/api/auth/register", json={
             "email": "journey@example.com", "password": "securepassword123"
@@ -50,8 +53,11 @@ class TestGeneralWorkflow:
         assert final_items[0]["id"] == item1["id"]
         assert final_items[0]["description"] == "Updated description"
     
-    def test_bulk_coin_collection_management(self, authenticated_client, test_user):
-        """Test bulk operations on coin collection: create multiple coins, batch updates, and collection consistency."""
+    def test_bulk_operations(self, authenticated_client, test_user):
+        """
+        Flow: Create multiple items -> verify collection -> update all items -> verify all updates applied
+        Expected: 201 for each creation, 200 for updates, consistent data across all operations
+        """
         # Create 3 items
         items_data = [
             {"name": "Coin A", "year": "2024", "material": "gold"},
@@ -83,8 +89,11 @@ class TestGeneralWorkflow:
         for i in range(3):
             assert f"Updated description {i}" in descriptions
     
-    def test_api_error_handling_and_system_resilience(self, authenticated_client, test_user):
-        """Test comprehensive error handling: invalid coin data, non-existent resources, and system recovery capabilities."""
+    def test_error_handling(self, authenticated_client, test_user):
+        """
+        Flow: Attempt invalid operations -> verify proper error codes -> confirm system recovery with valid operation
+        Expected: Appropriate 4xx status codes for errors, 201 for recovery operation
+        """
         # Invalid item data
         invalid_responses = [
             authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold"}),
@@ -111,8 +120,11 @@ class TestGeneralWorkflow:
         })
         assert valid_response.status_code == status.HTTP_201_CREATED
     
-    def test_coin_data_consistency_across_operations(self, authenticated_client, test_user):
-        """Test data consistency across CRUD operations: create -> read -> update -> read -> delete with cross-validation."""
+    def test_data_consistency(self, authenticated_client, test_user):
+        """
+        Flow: Create item -> verify in list and individual views -> update -> verify changes -> delete -> verify removal
+        Expected: Data consistency maintained across all views and operations, proper 404 after deletion
+        """
         # Create item
         item_data = {
             "name": "Consistency Test Coin", "year": "2024", 
