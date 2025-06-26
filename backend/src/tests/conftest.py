@@ -12,6 +12,8 @@ from api.routes.fastapi_users import current_active_user, current_active_superus
 from models.base import Base
 from models.user import User
 from models.item import Item
+from models.collection import Collection
+from utils.tokens import generate_share_token
 
 
 # Test database URL (in-memory SQLite for fast tests)
@@ -160,6 +162,109 @@ async def test_item(test_session, test_user) -> Item:
     # Expunge from session to avoid greenlet issues in tests
     test_session.expunge(item)
     return item
+
+
+@pytest_asyncio.fixture
+async def test_collection(test_session, test_user) -> Collection:
+    """Create a test collection."""
+    collection = Collection(
+        name="Test Collection",
+        description="A test collection for testing purposes",
+        user_id=test_user.id,
+    )
+    test_session.add(collection)
+    await test_session.commit()
+    await test_session.refresh(collection)
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(collection)
+    return collection
+
+
+@pytest_asyncio.fixture
+async def test_collection_with_item(test_session, test_user) -> tuple[Collection, Item]:
+    """Create a test collection with an item."""
+    # Create collection
+    collection = Collection(
+        name="Collection with Item",
+        description="A collection that contains an item",
+        user_id=test_user.id,
+    )
+    test_session.add(collection)
+    
+    # Create item
+    item = Item(
+        name="Collection Item",
+        year="2024",
+        description="An item in a collection",
+        material="silver",
+        weight=15.0,
+        user_id=test_user.id,
+    )
+    test_session.add(item)
+    
+    # Add item to collection
+    collection.items.append(item)
+    
+    await test_session.commit()
+    await test_session.refresh(collection)
+    await test_session.refresh(item)
+    
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(collection)
+    test_session.expunge(item)
+    return collection, item
+
+
+@pytest_asyncio.fixture
+async def test_public_collection_with_share(test_session, test_user) -> tuple[Collection, str]:
+    """Create a public collection with share token."""
+    share_token = generate_share_token()
+    collection = Collection(
+        name="Public Shared Collection",
+        description="A public collection that can be shared",
+        share_token=share_token,
+        user_id=test_user.id,
+    )
+    test_session.add(collection)
+    await test_session.commit()
+    await test_session.refresh(collection)
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(collection)
+    return collection, share_token
+
+
+@pytest_asyncio.fixture
+async def another_user(test_session) -> User:
+    """Create another test user for isolation testing."""
+    user = User(
+        email="another@example.com",
+        hashed_password="$2b$12$another_test_hash",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    test_session.add(user)
+    await test_session.commit()
+    await test_session.refresh(user)
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def another_user_collection(test_session, another_user) -> Collection:
+    """Create a collection belonging to another user."""
+    collection = Collection(
+        name="Another User Collection",
+        description="A collection that belongs to another user",
+        user_id=another_user.id,
+    )
+    test_session.add(collection)
+    await test_session.commit()
+    await test_session.refresh(collection)
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(collection)
+    return collection
 
 
 def get_auth_headers(user_id: int) -> dict:
