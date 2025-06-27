@@ -40,6 +40,11 @@
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 Enter your email and password to sign up!
               </p>
+              
+              <!-- Error display -->
+              <div v-if="authStore.error" class="mt-4 rounded-lg bg-red-100 p-4 text-sm text-red-700 dark:bg-red-900 dark:text-red-300">
+                {{ authStore.error.message || 'An error occurred during sign up' }}
+              </div>
             </div>
             <div>
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
@@ -103,42 +108,6 @@
               </div>
               <form @submit.prevent="handleSubmit">
                 <div class="space-y-5">
-                  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <!-- First Name -->
-                    <div class="sm:col-span-1">
-                      <label
-                        for="fname"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
-                      >
-                        First Name<span class="text-error-500">*</span>
-                      </label>
-                      <input
-                        v-model="firstName"
-                        type="text"
-                        id="fname"
-                        name="fname"
-                        placeholder="Enter your first name"
-                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      />
-                    </div>
-                    <!-- Last Name -->
-                    <div class="sm:col-span-1">
-                      <label
-                        for="lname"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
-                      >
-                        Last Name<span class="text-error-500">*</span>
-                      </label>
-                      <input
-                        v-model="lastName"
-                        type="text"
-                        id="lname"
-                        name="lname"
-                        placeholder="Enter your last name"
-                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                      />
-                    </div>
-                  </div>
                   <!-- Email -->
                   <div>
                     <label
@@ -267,9 +236,10 @@
                   <div>
                     <button
                       type="submit"
-                      class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                      :disabled="authStore.isLoading"
+                      class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Sign Up
+                      {{ authStore.isLoading ? 'Creating Account...' : 'Sign Up' }}
                     </button>
                   </div>
                 </div>
@@ -313,10 +283,12 @@
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const firstName = ref('')
-const lastName = ref('')
+const authStore = useAuthStore()
+const router = useRouter()
+
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -326,14 +298,33 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-const handleSubmit = () => {
-  // Implement form submission logic here
-  console.log('Form submitted', {
-    firstName: firstName.value,
-    lastName: lastName.value,
+const handleSubmit = async () => {
+  if (!email.value || !password.value) {
+    authStore.setError({ message: 'Please fill in all required fields' })
+    return
+  }
+
+  if (password.value.length < 6) {
+    authStore.setError({ message: 'Password must be at least 6 characters long' })
+    return
+  }
+
+  if (!agreeToTerms.value) {
+    authStore.setError({ message: 'Please agree to the terms and conditions' })
+    return
+  }
+
+  authStore.setError(null) // Clear previous errors
+  const success = await authStore.register({
     email: email.value,
     password: password.value,
-    agreeToTerms: agreeToTerms.value,
+    is_active: true,
+    is_superuser: false,
+    is_verified: false
   })
+  
+  if (success) {
+    router.push({ name: 'Ecommerce' })
+  }
 }
 </script>

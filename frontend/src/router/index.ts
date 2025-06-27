@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,6 +13,7 @@ const router = createRouter({
       component: () => import('../views/Ecommerce.vue'),
       meta: {
         title: 'eCommerce Dashboard',
+        requiresAuth: true,
       },
     },
     {
@@ -20,6 +22,7 @@ const router = createRouter({
       component: () => import('../views/Others/Calendar.vue'),
       meta: {
         title: 'Calendar',
+        requiresAuth: true,
       },
     },
     {
@@ -28,6 +31,7 @@ const router = createRouter({
       component: () => import('../views/Others/UserProfile.vue'),
       meta: {
         title: 'Profile',
+        requiresAuth: true,
       },
     },
     {
@@ -36,6 +40,7 @@ const router = createRouter({
       component: () => import('../views/Forms/FormElements.vue'),
       meta: {
         title: 'Form Elements',
+        requiresAuth: true,
       },
     },
     {
@@ -145,7 +150,37 @@ const router = createRouter({
 
 export default router
 
-router.beforeEach((to, from, next) => {
+// Navigation guards
+router.beforeEach(async (to, from, next) => {
+  // Set page title
   document.title = `Vue.js ${to.meta.title} | TailAdmin - Vue.js Tailwind CSS Dashboard Template`
-  next()
+  
+  const authStore = useAuthStore()
+  
+  // Initialize auth if not already done
+  if (authStore.token && !authStore.isAuthenticated) {
+    try {
+      await authStore.initialize()
+    } catch (error) {
+      console.warn('Failed to initialize auth:', error)
+    }
+  }
+  
+  // Check if route requires authentication
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const isAuthRoute = to.path === '/signin' || to.path === '/signup'
+  
+  if (requiresAuth && !authStore.isAuthenticated) {
+    // Redirect to sign in if authentication is required
+    next({ 
+      path: '/signin', 
+      query: { redirect: to.fullPath }
+    })
+  } else if (isAuthRoute && authStore.isAuthenticated) {
+    // Redirect to dashboard if already authenticated and trying to access auth pages
+    const redirectPath = (to.query.redirect as string) || '/'
+    next(redirectPath)
+  } else {
+    next()
+  }
 })

@@ -40,6 +40,11 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   Enter your email and password to sign in!
                 </p>
+                
+                <!-- Error display -->
+                <div v-if="authStore.error" class="mt-4 rounded-lg bg-red-100 p-4 text-sm text-red-700 dark:bg-red-900 dark:text-red-300">
+                  {{ authStore.error.message || 'An error occurred during sign in' }}
+                </div>
               </div>
               <div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
@@ -229,9 +234,10 @@
                     <div>
                       <button
                         type="submit"
-                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                        :disabled="authStore.isLoading"
+                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Sign In
+                        {{ authStore.isLoading ? 'Signing In...' : 'Sign In' }}
                       </button>
                     </div>
                   </div>
@@ -274,8 +280,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -285,12 +297,16 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-const handleSubmit = () => {
-  // Handle form submission
-  console.log('Form submitted', {
-    email: email.value,
-    password: password.value,
-    keepLoggedIn: keepLoggedIn.value,
-  })
+const handleSubmit = async () => {
+  if (!email.value || !password.value) {
+    authStore.setError({ message: 'Please fill in all fields' })
+    return
+  }
+
+  authStore.setError(null) // Clear previous errors
+  const success = await authStore.login(email.value, password.value)
+  if (success) {
+    router.push({ name: 'Ecommerce' })
+  }
 }
 </script>

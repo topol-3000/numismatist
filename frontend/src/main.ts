@@ -7,13 +7,23 @@ import 'jsvectormap/dist/jsvectormap.css'
 import 'flatpickr/dist/flatpickr.css'
 
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import VueApexCharts from 'vue3-apexcharts'
 
 const app = createApp(App)
+const pinia = createPinia()
 
+app.use(pinia)
 app.use(router)
-app.use(VueApexCharts)
+app.component('apexchart', VueApexCharts)
+
+// Initialize auth store after pinia is set up
+import { useAuthStore } from '@/stores/auth'
+
+// Initialize auth store
+const authStore = useAuthStore()
+authStore.initialize()
 
 app.mount('#app')
