@@ -1,6 +1,23 @@
 name: numismatist
 
 services:
+  numismatist_frontend:
+    build:
+      context: frontend
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - frontend/.env
+    depends_on:
+      - numismatist_api
+    networks:
+      - numismatist_net
+
   numismatist_api:
     build:
       context: backend

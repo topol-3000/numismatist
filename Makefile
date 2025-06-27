@@ -3,7 +3,8 @@
 # =================================================
 
 # Configuration variables
-BACKEND_ENV_FILE =  backend/.env
+BACKEND_ENV_FILE = backend/.env
+FRONTEND_ENV_FILE = frontend/.env
 DOCKER_COMPOSE_CMD = docker compose
 
 # Colors for better readability
@@ -14,7 +15,7 @@ RED = \033[0;31m
 RESET = \033[0m
 
 # Define all phony targets (targets that don't produce a file with the target's name)
-.PHONY: help setup up build down build-up clean prepare-env-files test
+.PHONY: help setup up build down build-up clean prepare-env-files test generate-migration migrate-up-latest migrate-up migrate-down-previous migrate-down
 
 # Default target when just 'make' is executed
 .DEFAULT_GOAL := help
@@ -106,15 +107,21 @@ migrate-down:
 
 prepare-env-files:
 	@echo "${CYAN}Preparing environment files...${RESET}"
-	@if [ ! -f src/.env ]; then \
+	@if [ ! -f ${BACKEND_ENV_FILE} ]; then \
 		cp .env.backend.example ${BACKEND_ENV_FILE}; \
 		echo "${GREEN}Environment file for backend prepared successfully${RESET}"; \
 	else \
 		echo "${YELLOW}Environment file for backend already exists, skipping${RESET}"; \
 	fi
+	@if [ ! -f ${FRONTEND_ENV_FILE} ]; then \
+		cp .env.frontend.example ${FRONTEND_ENV_FILE}; \
+		echo "${GREEN}Environment file for frontend prepared successfully${RESET}"; \
+	else \
+		echo "${YELLOW}Environment file for frontend already exists, skipping${RESET}"; \
+	fi
 
 setup: prepare-env-files build-up migrate-up-latest
-	@echo "${GREEN}Setup complete!${RESET}"
+	@echo "${GREEN}Setup complete! Frontend available at http://localhost:3000, Backend API at http://localhost:8099${RESET}"
 
 # =================================================
 # TESTING COMMANDS
