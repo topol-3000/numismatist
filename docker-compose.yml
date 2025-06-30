@@ -43,6 +43,19 @@ services:
     networks:
       - numismatist_net
 
+  numismatist_frontend:
+    build:
+      context: frontend
+    env_file:
+      - frontend/.env
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - numismatist_net
+
   numismatist_db:
     image: postgres:17.2-alpine3.20
     env_file:
