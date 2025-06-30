@@ -1,6 +1,7 @@
 import sys
 from enum import Enum
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,19 +13,19 @@ class APISettings(BaseModel):
     title: str = 'Numismatist'
     description: str = 'API for numismatist backend'
     version: str = '0.0.1'
-    port: int = Field(default=8000, ge=1, le=65535)
-    cors_origins: list[str] = ['*']
+    port: Annotated[int, Field(default=8000, ge=1, le=65535)]
+    cors_origins: Annotated[list[str], Field(default=['*'])]
 
 
 class DatabaseSettings(BaseModel):
     host: str
-    port: int = Field(ge=1, le=65535)
+    port: Annotated[int, Field(ge=1, le=65535)]
     user: str
     password: str
     name: str
     debug: bool = False
-    pool_size: int = Field(default=100, gt=0)
-    max_overflow: int = Field(default=50, ge=0)
+    pool_size: Annotated[int, Field(default=100, gt=0)]
+    max_overflow: Annotated[int, Field(default=50, ge=0)]
 
     @property
     def dsn(self) -> str:
@@ -32,7 +33,7 @@ class DatabaseSettings(BaseModel):
 
 
 class AccessTokenSettings(BaseModel):
-    lifetime_seconds: int = Field(default=3600, ge=300, le=86400)  # must be 5 min - 24 hours
+    lifetime_seconds: Annotated[int, Field(default=3600, ge=300, le=86400)]  # must be 5 min - 24 hours
     reset_password_token_secret: str
     verification_token_secret: str
 
