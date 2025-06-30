@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Text, String, Float
+from sqlalchemy import ForeignKey, Text, String, Float, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from utils.enums import Material
@@ -12,6 +12,8 @@ from .mixins.uuid_pk import UuidPkMixin
 if TYPE_CHECKING:
     from .user import User
     from .collection import Collection
+    from .transaction import Transaction
+    from .transaction_item import TransactionItem
 
 
 class Item(Base, UuidPkMixin):
@@ -36,4 +38,7 @@ class Item(Base, UuidPkMixin):
         'Collection', 
         back_populates='items',
         lazy='select'
+    )
+    transaction_items: Mapped[list['TransactionItem']] = relationship(
+        'TransactionItem', back_populates='item', lazy='selectin'
     )

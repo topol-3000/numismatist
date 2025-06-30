@@ -12,6 +12,7 @@ from .mixins.id_int_pk import IdIntPkMixin
 if TYPE_CHECKING:
     from .item import Item
     from .collection import Collection
+    from .dealer import Dealer
 
 
 class User(Base, IdIntPkMixin, SQLAlchemyBaseUserTable[UserIdType]):
