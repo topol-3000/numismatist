@@ -1,6 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Text, String, Float
+from sqlalchemy import ForeignKey, Text, String, Float, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from utils.enums import Material
@@ -11,6 +11,7 @@ from .mixins.uuid_pk import UuidPkMixin
 
 if TYPE_CHECKING:
     from .user import User
+    from .transaction import Transaction
 
 
 class Item(Base, UuidPkMixin):
@@ -28,3 +29,8 @@ class Item(Base, UuidPkMixin):
     
     # Relationship to user
     user: Mapped['User'] = relationship('User', back_populates='items')
+
+    # Relationship to transaction.
+    transaction_id: Mapped[Optional[int]] = mapped_column(ForeignKey('transactions.id'), nullable=True)
+    price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    transaction: Mapped[Optional['Transaction']] = relationship('Transaction', back_populates='items')

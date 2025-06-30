@@ -16,7 +16,8 @@ class ItemBase(SchemaConfigMixin):
 
 
 class ItemCreate(ItemBase):
-    pass
+    transaction_id: Optional[int] = None
+    price: Optional[float] = None
 
 
 class ItemUpdate(SchemaConfigMixin):

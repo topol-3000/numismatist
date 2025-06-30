@@ -11,6 +11,7 @@ from .mixins.id_int_pk import IdIntPkMixin
 
 if TYPE_CHECKING:
     from .item import Item
+    from .dealer import Dealer
 
 
 class User(Base, IdIntPkMixin, SQLAlchemyBaseUserTable[UserIdType]):
@@ -18,6 +19,8 @@ class User(Base, IdIntPkMixin, SQLAlchemyBaseUserTable[UserIdType]):
     
     # Relationship to items
     items: Mapped[list['Item']] = relationship('Item', back_populates='user', lazy='select')
+    # Relationship to dealers (категории)
+    dealers: Mapped[list['Dealer']] = relationship('Dealer', back_populates='user', lazy='select')
 
     @classmethod
     def get_db(cls, session: AsyncSession):
