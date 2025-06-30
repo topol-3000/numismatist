@@ -181,8 +181,8 @@ async def test_collection(test_session, test_user) -> Collection:
 
 
 @pytest_asyncio.fixture
-async def test_collection_with_item(test_session, test_user) -> tuple[Collection, Item]:
-    """Create a test collection with an item."""
+async def test_collection_with_item(test_session, test_user) -> tuple[str, str]:
+    """Create a test collection with an item and return their IDs."""
     # Create collection
     collection = Collection(
         name="Collection with Item",
@@ -190,8 +190,13 @@ async def test_collection_with_item(test_session, test_user) -> tuple[Collection
         user_id=test_user.id,
     )
     test_session.add(collection)
+    await test_session.commit()
+    await test_session.refresh(collection)
     
-    # Create item
+    # Store the collection ID
+    collection_id = str(collection.id)
+    
+    # Create item and assign it to the collection
     item = Item(
         name="Collection Item",
         year="2024",
@@ -199,20 +204,21 @@ async def test_collection_with_item(test_session, test_user) -> tuple[Collection
         material="silver",
         weight=15.0,
         user_id=test_user.id,
+        collection_id=collection.id,
     )
     test_session.add(item)
     
-    # Add item to collection
-    collection.items.append(item)
-    
     await test_session.commit()
-    await test_session.refresh(collection)
     await test_session.refresh(item)
+    
+    # Store the item ID
+    item_id = str(item.id)
     
     # Expunge from session to avoid greenlet issues in tests
     test_session.expunge(collection)
     test_session.expunge(item)
-    return collection, item
+    
+    return collection_id, item_id
 
 
 @pytest_asyncio.fixture

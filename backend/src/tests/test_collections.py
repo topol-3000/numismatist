@@ -202,10 +202,10 @@ class TestCollectionsEndpoints:
         Flow: POST /api/collections/{id}/items with item already in collection
         Expected: 400 Bad Request
         """
-        collection, item = test_collection_with_item
-        item_data = {"item_id": str(item.id)}
+        collection_id, item_id = test_collection_with_item
+        item_data = {"item_id": item_id}
         
-        response = authenticated_client.post(f"/api/collections/{collection.id}/items", json=item_data)
+        response = authenticated_client.post(f"/api/collections/{collection_id}/items", json=item_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "already in the collection" in response.json()["detail"]
@@ -215,19 +215,19 @@ class TestCollectionsEndpoints:
         Flow: DELETE /api/collections/{id}/items with item in collection
         Expected: 204 No Content, item should be removed
         """
-        collection, item = test_collection_with_item
-        item_data = {"item_id": str(item.id)}
+        collection_id, item_id = test_collection_with_item
+        item_data = {"item_id": item_id}
         
         response = authenticated_client.request(
             "DELETE", 
-            f"/api/collections/{collection.id}/items", 
+            f"/api/collections/{collection_id}/items", 
             json=item_data
         )
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         
         # Verify item is removed from collection
-        get_response = authenticated_client.get(f"/api/collections/{collection.id}")
+        get_response = authenticated_client.get(f"/api/collections/{collection_id}")
         assert get_response.status_code == status.HTTP_200_OK
         collection_data = get_response.json()
         assert len(collection_data["items"]) == 0
@@ -675,3 +675,112 @@ class TestCollectionsWorkflows:
         # Step 7: Verify deletion
         get_response = authenticated_client.get(f"/api/collections/{collection_id}")
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_item_one_to_many_constraint(self, authenticated_client, test_user):
+        """
+        Flow: Create item -> add to collection1 -> try to add to collection2
+        Expected: Second attempt fails with 400 Bad Request
+        """
+        # Create two collections
+        collection1_data = {"name": "First Collection"}
+        collection2_data = {"name": "Second Collection"}
+        
+        collection1_response = authenticated_client.post("/api/collections/", json=collection1_data)
+        collection2_response = authenticated_client.post("/api/collections/", json=collection2_data)
+        
+        assert collection1_response.status_code == status.HTTP_201_CREATED
+        assert collection2_response.status_code == status.HTTP_201_CREATED
+        
+        collection1 = collection1_response.json()
+        collection2 = collection2_response.json()
+        
+        # Create an item
+        item_data = {
+            "name": "Constraint Test Coin",
+            "year": "2024",
+            "material": "gold",
+            "weight": 10.0
+        }
+        
+        item_response = authenticated_client.post("/api/items/", json=item_data)
+        assert item_response.status_code == status.HTTP_201_CREATED
+        item = item_response.json()
+        
+        # Add item to first collection - should succeed
+        add_to_first = authenticated_client.post(
+            f"/api/collections/{collection1['id']}/items",
+            json={"item_id": item["id"]}
+        )
+        assert add_to_first.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Try to add same item to second collection - should fail
+        add_to_second = authenticated_client.post(
+            f"/api/collections/{collection2['id']}/items",
+            json={"item_id": item["id"]}
+        )
+        assert add_to_second.status_code == status.HTTP_400_BAD_REQUEST
+        assert "already in the collection" in add_to_second.json()["detail"]
+        
+        # Verify item is only in first collection
+        collection1_get = authenticated_client.get(f"/api/collections/{collection1['id']}")
+        collection2_get = authenticated_client.get(f"/api/collections/{collection2['id']}")
+        
+        assert len(collection1_get.json()["items"]) == 1
+        assert len(collection2_get.json()["items"]) == 0
+        assert collection1_get.json()["items"][0]["id"] == item["id"]
+
+    def test_item_move_between_collections(self, authenticated_client, test_user):
+        """
+        Flow: Create item -> add to collection1 -> remove from collection1 -> add to collection2
+        Expected: Item can be moved between collections by removing first
+        """
+        # Create two collections
+        collection1_data = {"name": "First Collection"}
+        collection2_data = {"name": "Second Collection"}
+        
+        collection1_response = authenticated_client.post("/api/collections/", json=collection1_data)
+        collection2_response = authenticated_client.post("/api/collections/", json=collection2_data)
+        
+        collection1 = collection1_response.json()
+        collection2 = collection2_response.json()
+        
+        # Create an item
+        item_data = {
+            "name": "Move Test Coin",
+            "year": "2024",
+            "material": "silver",
+            "weight": 15.0
+        }
+        
+        item_response = authenticated_client.post("/api/items/", json=item_data)
+        item = item_response.json()
+        
+        # Add item to first collection
+        add_to_first = authenticated_client.post(
+            f"/api/collections/{collection1['id']}/items",
+            json={"item_id": item["id"]}
+        )
+        assert add_to_first.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Remove item from first collection
+        remove_from_first = authenticated_client.request(
+            "DELETE",
+            f"/api/collections/{collection1['id']}/items",
+            json={"item_id": item["id"]}
+        )
+        assert remove_from_first.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Now add item to second collection - should succeed
+        add_to_second = authenticated_client.post(
+            f"/api/collections/{collection2['id']}/items",
+            json={"item_id": item["id"]}
+        )
+        assert add_to_second.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Verify item is now only in second collection
+        collection1_get = authenticated_client.get(f"/api/collections/{collection1['id']}")
+        collection2_get = authenticated_client.get(f"/api/collections/{collection2['id']}")
+        
+        assert len(collection1_get.json()["items"]) == 0
+        assert len(collection2_get.json()["items"]) == 1
+        assert collection2_get.json()["items"][0]["id"] == item["id"]

@@ -31,3 +31,4 @@ class ItemUpdate(SchemaConfigMixin):
 class ItemRead(ItemBase):
     id: str
     user_id: UserIdType
+    collection_id: Annotated[str | None, Field(description="ID of the collection this item belongs to")] = None

@@ -27,11 +27,13 @@ class Item(Base, UuidPkMixin):
     # Foreign key to user
     user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'), nullable=False)
     
+    # Foreign key to collection (optional - an item may not be in any collection)
+    collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'), nullable=True)
+    
     # Relationships
     user: Mapped['User'] = relationship('User', back_populates='items')
-    collections: Mapped[list['Collection']] = relationship(
+    collection: Mapped['Collection | None'] = relationship(
         'Collection', 
-        secondary='collection_items', 
         back_populates='items',
         lazy='select'
     )

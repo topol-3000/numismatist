@@ -162,9 +162,7 @@ async def add_item_to_collection(
     """Add an item to a collection."""
     # Check if collection exists and belongs to user
     collection_result = await session.execute(
-        select(Collection)
-        .options(selectinload(Collection.items))
-        .where(Collection.id == collection_id, Collection.user_id == current_user.id)
+        select(Collection).where(Collection.id == collection_id, Collection.user_id == current_user.id)
     )
     collection = collection_result.scalar_one_or_none()
     
@@ -186,15 +184,15 @@ async def add_item_to_collection(
             detail="Item not found"
         )
     
-    # Check if item is already in collection
-    if item in collection.items:
+    # Check if item is already in a collection
+    if item.collection_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Item is already in the collection"
         )
     
     # Add item to collection
-    collection.items.append(item)
+    item.collection_id = collection_id
     await session.commit()
 
 
@@ -208,9 +206,7 @@ async def remove_item_from_collection(
     """Remove an item from a collection."""
     # Check if collection exists and belongs to user
     collection_result = await session.execute(
-        select(Collection)
-        .options(selectinload(Collection.items))
-        .where(Collection.id == collection_id, Collection.user_id == current_user.id)
+        select(Collection).where(Collection.id == collection_id, Collection.user_id == current_user.id)
     )
     collection = collection_result.scalar_one_or_none()
     
@@ -232,15 +228,15 @@ async def remove_item_from_collection(
             detail="Item not found"
         )
     
-    # Check if item is in collection
-    if item not in collection.items:
+    # Check if item is in this collection
+    if item.collection_id != collection_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Item is not in the collection"
         )
     
     # Remove item from collection
-    collection.items.remove(item)
+    item.collection_id = None
     await session.commit()
 
 

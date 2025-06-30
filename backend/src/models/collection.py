@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Text, String, DateTime, Table, Column, UUID
+from sqlalchemy import ForeignKey, Text, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -15,13 +15,7 @@ if TYPE_CHECKING:
     from .item import Item
 
 
-# Association table for many-to-many relationship between collections and items
-collection_items = Table(
-    'collection_items',
-    Base.metadata,
-    Column('collection_id', UUID(as_uuid=False), ForeignKey('collections.id'), primary_key=True),
-    Column('item_id', UUID(as_uuid=False), ForeignKey('items.id'), primary_key=True),
-)
+
 
 
 class Collection(Base, UuidPkMixin):
@@ -47,7 +41,6 @@ class Collection(Base, UuidPkMixin):
     user: Mapped['User'] = relationship('User', back_populates='collections')
     items: Mapped[list['Item']] = relationship(
         'Item', 
-        secondary=collection_items, 
-        back_populates='collections',
+        back_populates='collection',
         lazy='select'
     )
