@@ -16,13 +16,13 @@
                   Our Mission
                 </h3>
                 <p class="mb-0">
-                  To provide collectors with the most comprehensive and user-friendly platform 
-                  for organizing, cataloging, and sharing their numismatic treasures.
+                  To provide collectors with the most comprehensive and user-friendly platform for
+                  organizing, cataloging, and sharing their numismatic treasures.
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div class="col-md-6">
             <div class="card border-0 bg-light h-100">
               <div class="card-body p-4">
@@ -31,8 +31,8 @@
                   Our Vision
                 </h3>
                 <p class="mb-0">
-                  To become the leading digital platform that connects numismatists worldwide 
-                  and preserves the rich history embedded in every coin.
+                  To become the leading digital platform that connects numismatists worldwide and
+                  preserves the rich history embedded in every coin.
                 </p>
               </div>
             </div>
@@ -84,9 +84,9 @@
         <div class="text-center">
           <h2 class="h3 fw-bold mb-4">Built for Collectors, by Collectors</h2>
           <p class="mb-4">
-            Our team understands the passion and dedication that goes into numismatic collecting. 
-            We've created this platform to address the real needs of collectors, from beginners 
-            to seasoned experts.
+            Our team understands the passion and dedication that goes into numismatic collecting.
+            We've created this platform to address the real needs of collectors, from beginners to
+            seasoned experts.
           </p>
           <router-link to="/" class="btn btn-primary btn-lg">
             <i class="fas fa-home me-2"></i>

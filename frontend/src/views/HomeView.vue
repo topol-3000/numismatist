@@ -12,9 +12,7 @@
             <i class="fas fa-coins me-3"></i>
             Welcome to Numismatist
           </h1>
-          <p class="lead mb-4">
-            Organize, catalog, and manage your coin collections with ease
-          </p>
+          <p class="lead mb-4">Organize, catalog, and manage your coin collections with ease</p>
           <div class="d-flex justify-content-center gap-3">
             <router-link to="/collections" class="btn btn-light btn-lg">
               <i class="fas fa-folder me-2"></i>
@@ -37,7 +35,7 @@
           <p class="lead text-muted">Everything you need to manage your numismatic collection</p>
         </div>
       </div>
-      
+
       <div class="row g-4">
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
@@ -45,24 +43,26 @@
               <i class="fas fa-folder-open fa-3x text-primary mb-3"></i>
               <h5 class="card-title">Organize Collections</h5>
               <p class="card-text">
-                Create and manage multiple collections to organize your coins by theme, era, or country.
+                Create and manage multiple collections to organize your coins by theme, era, or
+                country.
               </p>
             </div>
           </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
               <i class="fas fa-coins fa-3x text-primary mb-3"></i>
               <h5 class="card-title">Catalog Items</h5>
               <p class="card-text">
-                Add detailed information about each coin including photos, descriptions, and valuations.
+                Add detailed information about each coin including photos, descriptions, and
+                valuations.
               </p>
             </div>
           </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
@@ -74,7 +74,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
@@ -86,7 +86,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
@@ -98,7 +98,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-lg-4 col-md-6">
           <div class="card h-100 shadow-sm">
             <div class="card-body text-center">
@@ -117,7 +117,9 @@
     <div class="bg-light py-5">
       <div class="container text-center">
         <h3 class="mb-3">Ready to start organizing your collection?</h3>
-        <p class="lead mb-4">Join thousands of collectors who trust Numismatist with their precious collections.</p>
+        <p class="lead mb-4">
+          Join thousands of collectors who trust Numismatist with their precious collections.
+        </p>
         <router-link to="/register" class="btn btn-primary btn-lg">
           <i class="fas fa-rocket me-2"></i>
           Start Your Journey
