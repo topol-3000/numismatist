@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from pydantic import Field
 
 from schemas.base import SchemaConfigMixin
