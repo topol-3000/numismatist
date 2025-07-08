@@ -51,9 +51,64 @@ async def create_item(
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
 ):
-    """Create a new item."""
-    item = Item(**item_data.model_dump(), user_id=current_user.id)
+    """Create a new item, optionally linking to a transaction and/or dealer."""
+    # 1. Create the item itself
+    item = Item(**{k: v for k, v in item_data.model_dump().items() if k in Item.__table__.columns.keys()}, user_id=current_user.id)
     session.add(item)
+    await session.flush()  # get item.id
+
+    # 2. Transaction logic
+    price = getattr(item_data, 'price', None)
+    dealer_id = getattr(item_data, 'dealer_id', None)
+    dealer_data = getattr(item_data, 'dealer_data', None)
+    transaction_id = getattr(item_data, 'transaction_id', None)
+    transaction = None
+
+    # If price is set but neither dealer_id nor dealer_data nor transaction_id, return error
+    if price is not None and not (dealer_id or dealer_data or transaction_id):
+        raise HTTPException(status_code=404, detail="Dealer info required for transaction")
+
+    if price is not None and (dealer_id or dealer_data) and not transaction_id:
+        # Create dealer if needed
+        if not dealer_id and dealer_data and 'name' in dealer_data:
+            from models.dealer import Dealer
+            dealer = Dealer(
+                name=dealer_data['name'],
+                contact_info=dealer_data.get('contact_info'),
+                user_id=current_user.id
+            )
+            session.add(dealer)
+            await session.flush()
+            dealer_id = dealer.id
+
+        # Create new transaction
+        from models.transaction import Transaction
+        from datetime import date
+        transaction = Transaction(
+            dealer_id=dealer_id,
+            user_id=current_user.id,
+            date=date.today(),
+            total_amount=price
+        )
+        session.add(transaction)
+        await session.flush()
+        transaction_id = transaction.id
+    elif transaction_id:
+        from models.transaction import Transaction
+        transaction = await session.get(Transaction, transaction_id)
+        if not transaction or transaction.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Transaction not found or not yours")
+        # Update total_amount
+        transaction.total_amount = (transaction.total_amount or 0) + (price or 0)
+        await session.flush()
+
+    # 3. Link item to transaction if needed
+    if transaction_id and price is not None:
+        from models.transaction_item import TransactionItem
+        ti = TransactionItem(transaction_id=transaction_id, item_id=item.id, price=price)
+        session.add(ti)
+        await session.flush()
+
     await session.commit()
     await session.refresh(item)
     return item

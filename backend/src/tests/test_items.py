@@ -1,6 +1,11 @@
 """Tests for items endpoints."""
 import pytest
 from fastapi import status
+from models.dealer import Dealer
+from models.transaction import Transaction
+from models.transaction_item import TransactionItem
+from datetime import date
+from sqlalchemy import select
 
 
 class TestItemsEndpoints:
@@ -338,3 +343,98 @@ class TestItemsWorkflows:
         final_list = authenticated_client.get("/api/items/")
         assert final_list.status_code == status.HTTP_200_OK
         assert final_list.json() == []
+
+
+@pytest.mark.asyncio
+class TestItemTransactionIntegration:
+    """Tests for item creation with transaction/dealer logic."""
+
+    async def test_create_item_with_price_and_existing_dealer(self, authenticated_client, test_user, test_session):
+        # Create dealer
+        dealer = Dealer(name="Dealer1", contact_info="d1@dealer.com", user_id=test_user.id)
+        test_session.add(dealer)
+        await test_session.commit()
+        await test_session.refresh(dealer)
+        dealer_id = dealer.id
+        # Create item with price and dealer_id
+        item_data = {
+            "name": "Coin A", "year": "2025", "material": "gold", "price": 1000, "dealer_id": dealer_id
+        }
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        # Check transaction and transaction_item created
+        result = await test_session.execute(select(Transaction).where(Transaction.dealer_id == dealer_id, Transaction.user_id == test_user.id).order_by(Transaction.id.desc()))
+        tx = result.scalars().first()
+        assert tx is not None
+        assert tx.total_amount == 1000
+        result = await test_session.execute(select(TransactionItem).where(TransactionItem.transaction_id == tx.id))
+        ti = result.scalars().first()
+        assert ti is not None
+        assert ti.price == 1000
+
+    async def test_create_item_with_price_and_dealer_data(self, authenticated_client, test_user, test_session):
+        # Create item with price and dealer_data
+        item_data = {
+            "name": "Coin B", "year": "2025", "material": "silver", "price": 500, "dealer_data": {"name": "Dealer2", "contact_info": "d2@dealer.com"}
+        }
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        # Check dealer, transaction, transaction_item created
+        result = await test_session.execute(select(Dealer).where(Dealer.name == "Dealer2", Dealer.user_id == test_user.id))
+        dealer = result.scalars().first()
+        assert dealer is not None
+        result = await test_session.execute(select(Transaction).where(Transaction.dealer_id == dealer.id, Transaction.user_id == test_user.id).order_by(Transaction.id.desc()))
+        tx = result.scalars().first()
+        assert tx is not None
+        assert tx.total_amount == 500
+        result = await test_session.execute(select(TransactionItem).where(TransactionItem.transaction_id == tx.id))
+        ti = result.scalars().first()
+        assert ti is not None
+        assert ti.price == 500
+
+    async def test_create_item_with_price_and_transaction_id(self, authenticated_client, test_user, test_session):
+        # Create dealer and transaction
+        dealer = Dealer(name="Dealer3", contact_info=None, user_id=test_user.id)
+        test_session.add(dealer)
+        await test_session.commit()
+        await test_session.refresh(dealer)
+        dealer_id = dealer.id
+        tx = Transaction(dealer_id=dealer_id, user_id=test_user.id, date=date.today(), total_amount=0)
+        test_session.add(tx)
+        await test_session.commit()
+        await test_session.refresh(tx)
+        tx_id = tx.id
+        # Create item with price and transaction_id
+        item_data = {"name": "Coin C", "year": "2025", "material": "copper", "price": 200, "transaction_id": tx_id}
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        # Check transaction total_amount updated
+        await test_session.refresh(tx)
+        assert tx.total_amount == 200
+        result = await test_session.execute(select(TransactionItem).where(TransactionItem.transaction_id == tx.id))
+        ti = result.scalars().first()
+        assert ti is not None
+        assert ti.price == 200
+
+    async def test_create_item_with_no_transaction_fields(self, authenticated_client, test_user, test_session):
+        # Create item with no price/dealer/transaction
+        item_data = {"name": "Coin D", "year": "2025", "material": "silver"}
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        # Should not create any transaction or transaction_item
+        item_id = response.json()["id"]
+        result = await test_session.execute(select(TransactionItem).where(TransactionItem.item_id == item_id))
+        ti = result.scalars().first()
+        assert ti is None
+
+    async def test_create_item_with_price_but_no_dealer(self, authenticated_client, test_user):
+        # Should fail (no dealer_id or dealer_data)
+        item_data = {"name": "Coin E", "year": "2025", "material": "gold", "price": 100}
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == 404 or response.status_code == 422
+
+    async def test_create_item_with_invalid_transaction_id(self, authenticated_client, test_user):
+        # Should fail (transaction_id does not exist)
+        item_data = {"name": "Coin F", "year": "2025", "material": "gold", "price": 100, "transaction_id": 999999}
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == 404

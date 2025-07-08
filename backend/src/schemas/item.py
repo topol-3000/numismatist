@@ -16,7 +16,10 @@ class ItemBase(SchemaConfigMixin):
 
 
 class ItemCreate(ItemBase):
-    pass
+    price: Annotated[float | None, Field(None, description="Price for this item (optional, triggers transaction logic)")]
+    dealer_id: Annotated[int | None, Field(None, description="Existing dealer ID (optional, triggers transaction logic)")]
+    dealer_data: Annotated[dict | None, Field(None, description="New dealer data (optional, triggers dealer creation)")]
+    transaction_id: Annotated[int | None, Field(None, description="Existing transaction ID (optional, to link item)")]
 
 
 class ItemUpdate(SchemaConfigMixin):
