@@ -3,6 +3,7 @@ from typing import Optional, List, Annotated
 from datetime import date
 from .item import ItemRead
 from .transaction_item import TransactionItemRead, TransactionItemCreate
+from utils.enums_transaction import TransactionType
 
 
 class TransactionBase(BaseModel):
@@ -17,6 +18,7 @@ class TransactionBase(BaseModel):
     dealer_id: Annotated[int, Field(description="Dealer ID (category, seller, shop, etc.)")]
     date: date
     total_amount: Optional[float] = None
+    type: TransactionType = TransactionType.PURCHASE
 
 
 class TransactionCreate(BaseModel):
@@ -35,6 +37,7 @@ class TransactionCreate(BaseModel):
     date: date
     total_amount: Optional[float] = None
     items: List[TransactionItemCreate]
+    type: TransactionType = TransactionType.PURCHASE
 
 
 class TransactionRead(TransactionBase):
@@ -49,3 +52,4 @@ class TransactionRead(TransactionBase):
     id: Annotated[int, Field(description="Transaction ID")]
     user_id: Annotated[int, Field(description="User (owner) ID of the transaction")]
     transaction_items: List[TransactionItemRead] = []
+    type: TransactionType = TransactionType.PURCHASE

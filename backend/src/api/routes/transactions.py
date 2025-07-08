@@ -8,6 +8,7 @@ from api.routes.fastapi_users import current_active_user
 from models import Transaction, Dealer, User, TransactionItem, Item
 from schemas.transaction import TransactionCreate, TransactionRead
 from schemas.transaction_item import TransactionItemCreate
+from utils.enums_transaction import TransactionType
 
 
 router = APIRouter(prefix='/transactions', tags=['Transactions'])
@@ -45,19 +46,19 @@ async def create_transaction(
             raise HTTPException(status_code=404, detail='Dealer not found and no data to create')
 
     # Calculate total_amount if not provided and all item prices are present
+    transaction_type = getattr(transaction, 'type', None) or TransactionType.PURCHASE
     if transaction.total_amount is None:
         try:
             total = sum(float(item.price) for item in transaction.items if item.price is not None)
         except Exception:
             total = None
-
-        # Only set if all prices are present
         if all(item.price is not None for item in transaction.items):
             db_transaction = Transaction(
                 dealer_id=dealer_id,
                 user_id=current_user.id,
                 date=transaction.date,
                 total_amount=total,
+                type=transaction_type,
             )
         else:
             db_transaction = Transaction(
@@ -65,6 +66,7 @@ async def create_transaction(
                 user_id=current_user.id,
                 date=transaction.date,
                 total_amount=None,
+                type=transaction_type,
             )
     else:
         db_transaction = Transaction(
@@ -72,6 +74,7 @@ async def create_transaction(
             user_id=current_user.id,
             date=transaction.date,
             total_amount=transaction.total_amount,
+            type=transaction_type,
         )
 
     session.add(db_transaction)

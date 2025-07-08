@@ -2,9 +2,6 @@ import pytest
 from fastapi import status
 from datetime import date
 
-# =========================
-# DEALER TESTS
-# =========================
 
 class TestDealersAPI:
     """API tests for /api/dealers/ endpoints (private per user), including integration with items and transactions."""

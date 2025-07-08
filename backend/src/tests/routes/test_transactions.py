@@ -2,6 +2,7 @@ import pytest
 from fastapi import status
 from datetime import date
 
+
 class TestTransactionsAPI:
     """API tests for /api/transactions/ endpoints (full CRUD)."""
 
@@ -123,61 +124,94 @@ class TestTransactionsAPI:
         prices = sorted([ti["price"] for ti in tx["transaction_items"]])
         assert prices == [150.5, 249.5]
 
-def test_create_transaction_with_new_item(authenticated_client, test_user):
-    dealer_data = {"name": "Dealer New Coin", "contact_info": "newcoin@dealer.com"}
-    dealer_resp = authenticated_client.post("/api/dealers/", json=dealer_data)
-    dealer_id = dealer_resp.json()["id"]
-    tx_data = {
-        "dealer_id": dealer_id,
-        "date": str(date.today()),
-        "total_amount": 1234,
-        "items": [
-            {
-                "name": "Brand New Coin",
-                "year": "2025",
-                "material": "gold",
-                "price": 1234
-            }
-        ]
-    }
-    tx_resp = authenticated_client.post("/api/transactions/", json=tx_data)
-    assert tx_resp.status_code == status.HTTP_201_CREATED
-    tx = tx_resp.json()
-    assert tx["dealer_id"] == dealer_id
-    assert len(tx["transaction_items"]) == 1
-    item_id = tx["transaction_items"][0]["item_id"]
-    assert isinstance(item_id, str)
-    assert tx["transaction_items"][0]["price"] == 1234
+    def test_create_transaction_with_new_item(self, authenticated_client, test_user):
+        dealer_data = {"name": "Dealer New Coin", "contact_info": "newcoin@dealer.com"}
+        dealer_resp = authenticated_client.post("/api/dealers/", json=dealer_data)
+        dealer_id = dealer_resp.json()["id"]
+        tx_data = {
+            "dealer_id": dealer_id,
+            "date": str(date.today()),
+            "total_amount": 1234,
+            "items": [
+                {
+                    "name": "Brand New Coin",
+                    "year": "2025",
+                    "material": "gold",
+                    "price": 1234
+                }
+            ]
+        }
+        tx_resp = authenticated_client.post("/api/transactions/", json=tx_data)
+        assert tx_resp.status_code == status.HTTP_201_CREATED
+        tx = tx_resp.json()
+        assert tx["dealer_id"] == dealer_id
+        assert len(tx["transaction_items"]) == 1
+        item_id = tx["transaction_items"][0]["item_id"]
+        assert isinstance(item_id, str)
+        assert tx["transaction_items"][0]["price"] == 1234
 
-def test_create_transaction_with_existing_and_new_items(authenticated_client, test_user):
-    dealer_data = {"name": "Dealer Mixed", "contact_info": "mixed@dealer.com"}
-    dealer_resp = authenticated_client.post("/api/dealers/", json=dealer_data)
-    dealer_id = dealer_resp.json()["id"]
-    item_data = {"name": "Existing Coin", "year": "2024", "material": "silver"}
-    item_resp = authenticated_client.post("/api/items/", json=item_data)
-    item_id = item_resp.json()["id"]
-    tx_data = {
-        "dealer_id": dealer_id,
-        "date": str(date.today()),
-        "total_amount": 2000,
-        "items": [
-            {
-                "item_id": item_id,
-                "price": 1000
-            },
-            {
-                "name": "Brand New Coin 2",
-                "year": "2025",
-                "material": "gold",
-                "price": 1000
-            }
-        ]
-    }
-    tx_resp = authenticated_client.post("/api/transactions/", json=tx_data)
-    assert tx_resp.status_code == status.HTTP_201_CREATED
-    tx = tx_resp.json()
-    assert tx["dealer_id"] == dealer_id
-    assert len(tx["transaction_items"]) == 2
-    item_ids = [ti["item_id"] for ti in tx["transaction_items"]]
-    assert item_id in item_ids
-    assert any(isinstance(iid, str) and iid != item_id for iid in item_ids)
+    def test_create_transaction_with_existing_and_new_items(self, authenticated_client, test_user):
+        dealer_data = {"name": "Dealer Mixed", "contact_info": "mixed@dealer.com"}
+        dealer_resp = authenticated_client.post("/api/dealers/", json=dealer_data)
+        dealer_id = dealer_resp.json()["id"]
+        item_data = {"name": "Existing Coin", "year": "2024", "material": "silver"}
+        item_resp = authenticated_client.post("/api/items/", json=item_data)
+        item_id = item_resp.json()["id"]
+        tx_data = {
+            "dealer_id": dealer_id,
+            "date": str(date.today()),
+            "total_amount": 2000,
+            "items": [
+                {
+                    "item_id": item_id,
+                    "price": 1000
+                },
+                {
+                    "name": "Brand New Coin 2",
+                    "year": "2025",
+                    "material": "gold",
+                    "price": 1000
+                }
+            ]
+        }
+        tx_resp = authenticated_client.post("/api/transactions/", json=tx_data)
+        assert tx_resp.status_code == status.HTTP_201_CREATED
+        tx = tx_resp.json()
+        assert tx["dealer_id"] == dealer_id
+        assert len(tx["transaction_items"]) == 2
+        item_ids = [ti["item_id"] for ti in tx["transaction_items"]]
+        assert item_id in item_ids
+        assert any(isinstance(iid, str) and iid != item_id for iid in item_ids)
+
+    def test_create_transaction_with_type(self, authenticated_client, test_user):
+        dealer_data = {"name": "Type Dealer", "contact_info": "type@dealer.com"}
+        dealer_resp = authenticated_client.post("/api/dealers/", json=dealer_data)
+        dealer_id = dealer_resp.json()["id"]
+        item_data = {"name": "Type Coin", "year": "2025", "material": "gold"}
+        item_resp = authenticated_client.post("/api/items/", json=item_data)
+        item_id = item_resp.json()["id"]
+        tx_data = {
+            "dealer_id": dealer_id,
+            "date": str(date.today()),
+            "total_amount": 123,
+            "type": "gift",
+            "items": [
+                {"item_id": item_id, "price": 123}
+            ]
+        }
+        tx_resp = authenticated_client.post("/api/transactions/", json=tx_data)
+        assert tx_resp.status_code == status.HTTP_201_CREATED
+        tx = tx_resp.json()
+        assert tx["type"] == "gift"
+        tx_data2 = {
+            "dealer_id": dealer_id,
+            "date": str(date.today()),
+            "total_amount": 111,
+            "items": [
+                {"item_id": item_id, "price": 111}
+            ]
+        }
+        tx_resp2 = authenticated_client.post("/api/transactions/", json=tx_data2)
+        assert tx_resp2.status_code == status.HTTP_201_CREATED
+        tx2 = tx_resp2.json()
+        assert tx2["type"] == "purchase"

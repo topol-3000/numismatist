@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Date, Float
+from sqlalchemy import Date, Float, Enum as SAEnum
 from .base import Base
 from .mixins.id_int_pk import IdIntPkMixin
 from sqlalchemy import ForeignKey
+from utils.enums_transaction import TransactionType
 
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class Transaction(Base, IdIntPkMixin):
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
     date: Mapped['Date'] = mapped_column(Date, nullable=False)
     total_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    type: Mapped[TransactionType] = mapped_column(SAEnum(TransactionType), nullable=False, default=TransactionType.PURCHASE)
 
     dealer: Mapped['Dealer'] = relationship('Dealer', back_populates='transactions', lazy='select')
     user: Mapped['User'] = relationship('User', lazy='select')
