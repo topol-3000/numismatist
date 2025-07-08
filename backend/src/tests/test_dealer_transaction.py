@@ -47,9 +47,9 @@ class TestDealerTransaction:
         await test_session.flush()
         # Create a TransactionItem for each coin
         for item in items[:2]:
-            transaction_items.append(TransactionItem(transaction_id=transaction_id, item_id=item.id, price=2000, quantity=1))
+            transaction_items.append(TransactionItem(transaction_id=transaction_id, item_id=item.id, price=2000))
         for item in items[2:]:
-            transaction_items.append(TransactionItem(transaction_id=transaction_id, item_id=item.id, price=500, quantity=1))
+            transaction_items.append(TransactionItem(transaction_id=transaction_id, item_id=item.id, price=500))
         test_session.add_all(transaction_items)
         await test_session.commit()
         return transaction_id
@@ -115,7 +115,7 @@ class TestDealerTransaction:
         await test_session.flush()
         item_id = item.id
 
-        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=100, quantity=1)
+        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=100)
         test_session.add(ti)
         await test_session.commit()
 
@@ -142,7 +142,7 @@ class TestDealerTransaction:
         await test_session.flush()
         item_id = item.id
 
-        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=123, quantity=1)
+        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=123)
         test_session.add(ti)
         await test_session.flush()
         ti_id = ti.id
@@ -185,7 +185,7 @@ class TestDealerTransaction:
         await test_session.flush()
         item_id = item.id
 
-        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=0, quantity=1)
+        ti = TransactionItem(transaction_id=transaction_id, item_id=item_id, price=0)
         test_session.add(ti)
         await test_session.flush()
         ti_id = ti.id
