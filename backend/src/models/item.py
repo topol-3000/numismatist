@@ -37,3 +37,4 @@ class Item(Base, UuidPkMixin):
         back_populates='items',
         lazy='select'
     )
+    price_history = relationship('PriceHistory', back_populates='item', cascade='all, delete-orphan')

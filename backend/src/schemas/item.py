@@ -1,5 +1,6 @@
 from typing import Annotated
 from pydantic import Field
+from datetime import datetime
 
 from schemas.base import SchemaConfigMixin
 from utils.enums import Material
@@ -16,7 +17,8 @@ class ItemBase(SchemaConfigMixin):
 
 
 class ItemCreate(ItemBase):
-    pass
+    purchase_price: Annotated[float | None, Field(gt=0, description="Purchase price (optional)")] = None
+    purchase_date: Annotated[datetime | None, Field(description="Purchase date (optional)")] = None
 
 
 class ItemUpdate(SchemaConfigMixin):
