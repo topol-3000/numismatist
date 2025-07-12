@@ -24,3 +24,9 @@ class ErrorCode(StrEnum):
     INTERNAL_DATABASE_ERROR = '100003'
     DUPLICATE_RECORD_ERROR = '100004'
     NOT_FOUND_RECORD_ERROR = '100005'
+
+
+class PriceType(StrEnum):
+    IN = 'in'
+    OUT = 'out'
+    CURRENT = 'current'

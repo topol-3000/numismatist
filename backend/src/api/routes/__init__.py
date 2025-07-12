@@ -6,6 +6,7 @@ from .collections import router as collections_router
 from .items import router as items_router
 from .users import router as users_router
 from .dealers import router as dealers_router
+from .price_history import router as price_history_router
 
 http_bearer = HTTPBearer(auto_error=False)
 
@@ -15,3 +16,4 @@ router.include_router(users_router)
 router.include_router(items_router)
 router.include_router(collections_router)
 router.include_router(dealers_router)
+router.include_router(price_history_router)

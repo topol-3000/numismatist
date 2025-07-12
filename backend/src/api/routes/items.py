@@ -52,10 +52,24 @@ async def create_item(
     current_user: User = Depends(current_active_user),
 ):
     """Create a new item."""
-    item = Item(**item_data.model_dump(), user_id=current_user.id)
+    item = Item(**item_data.model_dump(exclude={"purchase_price", "purchase_date"}), user_id=current_user.id)
     session.add(item)
     await session.commit()
     await session.refresh(item)
+    # Add purchase price to PriceHistory if provided
+    if item_data.purchase_price is not None:
+        from models.price_history import PriceHistory
+        from utils.enums import PriceType
+        from datetime import datetime, timezone
+        price_history = PriceHistory(
+            item_id=item.id,
+            price=item_data.purchase_price,
+            price_type=PriceType.IN,
+            timestamp=item_data.purchase_date or datetime.now(timezone.utc)
+        )
+        session.add(price_history)
+        await session.commit()
+
     return item
 
 
