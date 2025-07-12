@@ -27,29 +27,49 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue'),
       meta: { requiresAuth: false, hideForAuth: true },
     },
+    // Admin routes - nested under /admin
     {
-      path: '/collections',
-      name: 'collections',
-      component: () => import('../views/HomeView.vue'), // Temporary, will create proper component later
+      path: '/admin',
+      redirect: '/admin/dashboard',
       meta: { requiresAuth: true },
-    },
-    {
-      path: '/items',
-      name: 'items',
-      component: () => import('../views/HomeView.vue'), // Temporary, will create proper component later
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/profile',
-      name: 'profile',
-      component: () => import('../views/HomeView.vue'), // Temporary, will create proper component later
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: () => import('../views/HomeView.vue'), // Temporary, will create proper component later
-      meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          component: () => import('../views/admin/DashboardView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'collections',
+          name: 'collections',
+          component: () => import('../views/admin/CollectionsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'items',
+          name: 'items',
+          component: () => import('../views/admin/ItemsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'dealers',
+          name: 'dealers',
+          component: () => import('../views/admin/DealersView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('../views/admin/ProfileView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('../views/admin/SettingsView.vue'),
+          meta: { requiresAuth: true },
+        },
+      ],
     },
     // Catch all route - should be last
     {
@@ -73,7 +93,7 @@ router.beforeEach((to, from, next) => {
 
   // Hide auth pages from authenticated users
   if (to.meta.hideForAuth && authStore.isAuthenticated) {
-    next({ name: 'home' })
+    next({ name: 'dashboard' })
     return
   }
 
