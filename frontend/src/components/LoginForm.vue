@@ -148,9 +148,13 @@ const handleSubmit = async () => {
   })
 
   if (success) {
-    // Redirect to intended page or dashboard
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/'
-    router.push(redirectTo)
+    // Redirect to intended page or admin dashboard
+    const redirectTo = (router.currentRoute.value.query.redirect as string) || null
+    if (redirectTo) {
+      router.push(redirectTo)
+    } else {
+      router.push({ name: 'dashboard' })
+    }
   } else {
     errorMessage.value = 'Invalid email or password. Please try again.'
   }
@@ -159,7 +163,7 @@ const handleSubmit = async () => {
 // Redirect if already authenticated
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    router.push('/')
+    router.push({ name: 'dashboard' })
   }
 })
 </script>
