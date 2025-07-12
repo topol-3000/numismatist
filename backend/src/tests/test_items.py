@@ -49,7 +49,9 @@ class TestItemsEndpoints:
         Flow: GET /api/items/nonexistent-id
         Expected: 404 Not Found with "Item not found" in error detail
         """
-        response = authenticated_client.get("/api/items/nonexistent-id")
+        # Use a valid UUID format that doesn't exist
+        nonexistent_uuid = "12345678-1234-1234-1234-123456789012"
+        response = authenticated_client.get(f"/api/items/{nonexistent_uuid}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Item not found" in response.json()["detail"]
@@ -64,7 +66,8 @@ class TestItemsEndpoints:
             "year": "2023",
             "description": "American Gold Eagle coin",
             "material": "gold",
-            "weight": 33.93
+            "weight": 33.93,
+            "purchase_price": 180000  # $1800 in pennies
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -86,7 +89,8 @@ class TestItemsEndpoints:
         item_data = {
             "name": "Simple Coin",
             "year": "2024",
-            "material": "silver"
+            "material": "silver",
+            "purchase_price": 5000  # $50 in pennies
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -128,7 +132,7 @@ class TestItemsEndpoints:
 
     def test_partial_update_item(self, authenticated_client, test_user, test_item):
         """
-        Flow: PUT /api/items/{id} with partial data (description, weight only)
+        Flow: PATCH /api/items/{id} with partial data (description, weight only)
         Expected: 200 OK with updated fields changed, other fields unchanged
         """
         update_data = {
@@ -136,7 +140,7 @@ class TestItemsEndpoints:
             "weight": 15.0
         }
 
-        response = authenticated_client.put(f"/api/items/{test_item.id}", json=update_data)
+        response = authenticated_client.patch(f"/api/items/{test_item.id}", json=update_data)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -148,7 +152,7 @@ class TestItemsEndpoints:
 
     def test_complete_update_item(self, authenticated_client, test_user, test_item):
         """
-        Flow: PUT /api/items/{id} with all fields updated
+        Flow: PATCH /api/items/{id} with all fields updated
         Expected: 200 OK with all fields matching new values
         """
         update_data = {
@@ -159,7 +163,7 @@ class TestItemsEndpoints:
             "weight": 20.5
         }
 
-        response = authenticated_client.put(f"/api/items/{test_item.id}", json=update_data)
+        response = authenticated_client.patch(f"/api/items/{test_item.id}", json=update_data)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -171,12 +175,13 @@ class TestItemsEndpoints:
 
     def test_update_nonexistent_item(self, authenticated_client, test_user):
         """
-        Flow: PUT /api/items/nonexistent-id with update data
+        Flow: PATCH /api/items/nonexistent-id with update data
         Expected: 404 Not Found
         """
         update_data = {"name": "New Name"}
+        nonexistent_uuid = "12345678-1234-1234-1234-123456789012"
 
-        response = authenticated_client.put("/api/items/nonexistent-id", json=update_data)
+        response = authenticated_client.patch(f"/api/items/{nonexistent_uuid}", json=update_data)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -198,30 +203,32 @@ class TestItemsEndpoints:
         Flow: DELETE /api/items/nonexistent-id
         Expected: 404 Not Found
         """
-        response = authenticated_client.delete("/api/items/nonexistent-id")
+        nonexistent_uuid = "12345678-1234-1234-1234-123456789012"
+        response = authenticated_client.delete(f"/api/items/{nonexistent_uuid}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_unauthenticated_access(self, client):
         """
         Flow: Access all item endpoints without authentication
-        Expected: All return 401 Unauthorized (GET, POST, PUT, DELETE)
+        Expected: All return 401 Unauthorized (GET, POST, PATCH, DELETE)
         """
         # Test all endpoints without authentication
+        valid_uuid = "12345678-1234-1234-1234-123456789012"
 
         response = client.get("/api/items/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        response = client.get("/api/items/some-id")
+        response = client.get(f"/api/items/{valid_uuid}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        response = client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "gold"})
+        response = client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "gold", "purchase_price": 5000})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        response = client.put("/api/items/some-id", json={"name": "Updated"})
+        response = client.patch(f"/api/items/{valid_uuid}", json={"name": "Updated"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        response = client.delete("/api/items/some-id")
+        response = client.delete(f"/api/items/{valid_uuid}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -239,7 +246,8 @@ class TestItemsWorkflows:
             "year": "2024",
             "description": "Testing lifecycle",
             "material": "silver",
-            "weight": 12.0
+            "weight": 12.0,
+            "purchase_price": 7500  # $75 in pennies
         }
 
         create_response = authenticated_client.post("/api/items/", json=create_data)
@@ -259,7 +267,7 @@ class TestItemsWorkflows:
             "weight": 15.5
         }
 
-        update_response = authenticated_client.put(f"/api/items/{item_id}", json=update_data)
+        update_response = authenticated_client.patch(f"/api/items/{item_id}", json=update_data)
         assert update_response.status_code == status.HTTP_200_OK
         updated_item = update_response.json()
         assert updated_item["description"] == update_data["description"]
@@ -282,7 +290,8 @@ class TestItemsWorkflows:
         create_data = {
             "name": "User 1 Coin",
             "year": "2024",
-            "material": "gold"
+            "material": "gold",
+            "purchase_price": 10000  # $100 in pennies
         }
 
         create_response = authenticated_client.post("/api/items/", json=create_data)
@@ -308,9 +317,9 @@ class TestItemsWorkflows:
         """
         # Create multiple items
         items_data = [
-            {"name": "Coin 1", "year": "2020", "material": "gold"},
-            {"name": "Coin 2", "year": "2021", "material": "silver"},
-            {"name": "Coin 3", "year": "2022", "material": "copper"},
+            {"name": "Coin 1", "year": "2020", "material": "gold", "purchase_price": 8000},
+            {"name": "Coin 2", "year": "2021", "material": "silver", "purchase_price": 3000},
+            {"name": "Coin 3", "year": "2022", "material": "copper", "purchase_price": 500},
         ]
 
         created_items = []

@@ -16,6 +16,13 @@ class Material(StrEnum):
     LEAD = 'lead'
 
 
+class PriceType(StrEnum):
+    """Price type for item price history tracking."""
+    PURCHASE = 'i'  # purchase price
+    SOLD = 's'      # sold price
+    CURRENT = 'c'   # current market price
+
+
 class ErrorCode(StrEnum):
     UNKNOWN_ERROR = '000001'
 

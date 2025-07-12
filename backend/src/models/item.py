@@ -12,6 +12,7 @@ from .mixins.uuid_pk import UuidPkMixin
 if TYPE_CHECKING:
     from .user import User
     from .collection import Collection
+    from .item_price_history import ItemPriceHistory
 
 
 class Item(Base, UuidPkMixin):
@@ -24,10 +25,8 @@ class Item(Base, UuidPkMixin):
     material: Mapped[Material] = mapped_column(nullable=False)
     weight: Mapped[float | None] = mapped_column(Float)
     
-    # Foreign key to user
+    # Foreign keys
     user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'), nullable=False)
-    
-    # Foreign key to collection (optional - an item may not be in any collection)
     collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'), nullable=True)
     
     # Relationships
@@ -36,4 +35,10 @@ class Item(Base, UuidPkMixin):
         'Collection', 
         back_populates='items',
         lazy='select'
+    )
+    price_history: Mapped[list['ItemPriceHistory']] = relationship(
+        'ItemPriceHistory',
+        back_populates='item',
+        cascade='all, delete-orphan',
+        order_by='ItemPriceHistory.datetime.desc()'
     )

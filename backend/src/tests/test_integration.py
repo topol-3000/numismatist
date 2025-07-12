@@ -16,14 +16,14 @@ class TestGeneralWorkflow:
             "email": "journey@example.com", "password": "securepassword123"
         })
         assert response.status_code == status.HTTP_201_CREATED
-        
-        # Create two items
+         # Create two items
         item1_response = authenticated_client.post("/api/items/", json={
-            "name": "First Coin", "year": "2024", "description": "My first coin", 
-            "material": "gold", "weight": 10.0
+            "name": "First Coin", "year": "2024", "description": "My first coin",
+            "material": "gold", "weight": 10.0, "purchase_price": 15000
         })
         item2_response = authenticated_client.post("/api/items/", json={
-            "name": "Silver Dollar", "year": "1921", "material": "silver", "weight": 26.73
+            "name": "Silver Dollar", "year": "1921", "material": "silver", 
+            "weight": 26.73, "purchase_price": 5000
         })
         assert item1_response.status_code == status.HTTP_201_CREATED
         assert item2_response.status_code == status.HTTP_201_CREATED
@@ -35,7 +35,7 @@ class TestGeneralWorkflow:
         assert len(items) == 2
         
         # Update first item
-        update_response = authenticated_client.put(f"/api/items/{item1['id']}", json={
+        update_response = authenticated_client.patch(f"/api/items/{item1['id']}", json={
             "description": "Updated description", "weight": 11.5
         })
         assert update_response.status_code == status.HTTP_200_OK
@@ -60,9 +60,9 @@ class TestGeneralWorkflow:
         """
         # Create 3 items
         items_data = [
-            {"name": "Coin A", "year": "2024", "material": "gold"},
-            {"name": "Coin B", "year": "2023", "material": "silver"},
-            {"name": "Coin C", "year": "2022", "material": "platinum"}
+            {"name": "Coin A", "year": "2024", "material": "gold", "purchase_price": 12000},
+            {"name": "Coin B", "year": "2023", "material": "silver", "purchase_price": 4000},
+            {"name": "Coin C", "year": "2022", "material": "platinum", "purchase_price": 25000}
         ]
         
         created_items = []
@@ -77,7 +77,7 @@ class TestGeneralWorkflow:
         
         # Update all items
         for i, item in enumerate(created_items):
-            update_response = authenticated_client.put(f"/api/items/{item['id']}", 
+            update_response = authenticated_client.patch(f"/api/items/{item['id']}", 
                                                      json={"description": f"Updated description {i}"})
             assert update_response.status_code == status.HTTP_200_OK
         
@@ -96,11 +96,11 @@ class TestGeneralWorkflow:
         """
         # Invalid item data
         invalid_responses = [
-            authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold"}),
-            authenticated_client.get("/api/items/non-existent-id"),
-            authenticated_client.put("/api/items/non-existent-id", json={"name": "Updated"}),
-            authenticated_client.delete("/api/items/non-existent-id"),
-            authenticated_client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "invalid"})
+            authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold", "purchase_price": 5000}),
+            authenticated_client.get("/api/items/12345678-1234-1234-1234-123456789012"),  # Valid UUID format
+            authenticated_client.patch("/api/items/12345678-1234-1234-1234-123456789012", json={"name": "Updated"}),
+            authenticated_client.delete("/api/items/12345678-1234-1234-1234-123456789012"),
+            authenticated_client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "invalid", "purchase_price": 5000})
         ]
         
         expected_codes = [
@@ -116,7 +116,7 @@ class TestGeneralWorkflow:
         
         # Verify system recovery with valid operation
         valid_response = authenticated_client.post("/api/items/", json={
-            "name": "Valid Coin", "year": "2024", "material": "silver"
+            "name": "Valid Coin", "year": "2024", "material": "silver", "purchase_price": 6000
         })
         assert valid_response.status_code == status.HTTP_201_CREATED
     
@@ -124,14 +124,16 @@ class TestGeneralWorkflow:
         """
         Flow: Create item -> verify in list and individual views -> update -> verify changes -> delete -> verify removal
         Expected: Data consistency maintained across all views and operations, proper 404 after deletion
-        """
-        # Create item
+        """        # Create item
         item_data = {
-            "name": "Consistency Test Coin", "year": "2024", 
-            "description": "Testing data consistency", "material": "gold", "weight": 15.0
+            "name": "Consistency Test Coin", "year": "2024",
+            "description": "Testing data consistency", "material": "gold", 
+            "weight": 15.0, "purchase_price": 18000
         }
-        
-        created_item = authenticated_client.post("/api/items/", json=item_data).json()
+
+        created_response = authenticated_client.post("/api/items/", json=item_data)
+        assert created_response.status_code == status.HTTP_201_CREATED
+        created_item = created_response.json()
         item_id = created_item["id"]
         
         # Verify item in both list and individual get
@@ -145,7 +147,7 @@ class TestGeneralWorkflow:
         
         # Update item
         update_data = {"weight": 16.5, "description": "Updated description"}
-        authenticated_client.put(f"/api/items/{item_id}", json=update_data)
+        authenticated_client.patch(f"/api/items/{item_id}", json=update_data)
         
         # Verify updates in both views
         updated_individual = authenticated_client.get(f"/api/items/{item_id}").json()

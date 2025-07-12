@@ -495,13 +495,15 @@ class TestCollectionsWorkflows:
             "name": "Workflow Item 1",
             "year": "2023",
             "material": "gold",
-            "weight": 10.0
+            "weight": 10.0,
+            "purchase_price": 8000
         }
         item_data_2 = {
             "name": "Workflow Item 2", 
             "year": "2024",
             "material": "silver",
-            "weight": 15.0
+            "weight": 15.0,
+            "purchase_price": 4500
         }
         
         item1_response = authenticated_client.post("/api/items/", json=item_data_1)
@@ -616,7 +618,8 @@ class TestCollectionsWorkflows:
             "name": "Lifecycle Coin",
             "year": "2024",
             "material": "gold",
-            "weight": 10.0
+            "weight": 10.0,
+            "purchase_price": 12000
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)
@@ -699,7 +702,8 @@ class TestCollectionsWorkflows:
             "name": "Constraint Test Coin",
             "year": "2024",
             "material": "gold",
-            "weight": 10.0
+            "weight": 10.0,
+            "purchase_price": 15000
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)
@@ -749,7 +753,8 @@ class TestCollectionsWorkflows:
             "name": "Move Test Coin",
             "year": "2024",
             "material": "silver",
-            "weight": 15.0
+            "weight": 15.0,
+            "purchase_price": 9000
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)
