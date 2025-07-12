@@ -49,13 +49,13 @@
         <!-- Authentication Links -->
         <ul class="navbar-nav">
           <li v-if="!authStore.isAuthenticated" class="nav-item">
-            <router-link to="/login" class="nav-link">
+            <router-link to="/login" class="nav-link" active-class="active">
               <i class="fas fa-sign-in-alt me-1"></i>
               Login
             </router-link>
           </li>
           <li v-if="!authStore.isAuthenticated" class="nav-item">
-            <router-link to="/register" class="nav-link">
+            <router-link to="/register" class="nav-link" active-class="active">
               <i class="fas fa-user-plus me-1"></i>
               Register
             </router-link>
