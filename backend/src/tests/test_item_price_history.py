@@ -32,7 +32,7 @@ class TestItemPriceHistory:
         """
         price_data: dict[str, Any] = {
             "price": 12000,  # $120 in pennies
-            "datetime": "2024-01-15T10:30:00"
+            "date": "2024-01-15"
         }
         
         response: Response = authenticated_client.post(f"/api/items/{test_item.id}/price-history", json=price_data)
@@ -43,10 +43,10 @@ class TestItemPriceHistory:
         assert price_entry["type"] == "c"  # Current market price
         assert price_entry["item_id"] == str(test_item.id)
 
-    def test_add_price_without_datetime(self, authenticated_client: TestClient, test_user: User, test_item: Item):
+    def test_add_price_without_date(self, authenticated_client: TestClient, test_user: User, test_item: Item):
         """
-        Flow: POST /api/items/{item_id}/price-history without datetime
-        Expected: 201 Created with current datetime auto-generated
+        Flow: POST /api/items/{item_id}/price-history without date
+        Expected: 201 Created with current date auto-generated
         """
         price_data: dict[str, Any] = {
             "price": 15000  # $150 in pennies
@@ -58,18 +58,18 @@ class TestItemPriceHistory:
         price_entry: dict[str, Any] = response.json()
         assert price_entry["price"] == price_data["price"]
         assert price_entry["type"] == "c"
-        assert "datetime" in price_entry  # Should have auto-generated datetime
+        assert "date" in price_entry  # Should have auto-generated date
 
     def test_get_price_history_multiple_entries(self, authenticated_client: TestClient, test_user: User, test_item: Item):
         """
         Flow: Add multiple price entries -> GET price history
-        Expected: 200 OK with all entries ordered by datetime descending
+        Expected: 200 OK with all entries ordered by date descending
         """
         # Add multiple price entries
         price_entries: list[dict[str, Any]] = [
-            {"price": 10000, "datetime": "2024-01-10T10:00:00"},
-            {"price": 12000, "datetime": "2024-01-15T10:00:00"},
-            {"price": 11000, "datetime": "2024-01-12T10:00:00"},
+            {"price": 10000, "date": "2024-01-10"},
+            {"price": 12000, "date": "2024-01-15"},
+            {"price": 11000, "date": "2024-01-12"},
         ]
         
         for price_data in price_entries:
@@ -83,20 +83,20 @@ class TestItemPriceHistory:
         history: list[dict[str, Any]] = response.json()
         assert len(history) == 4  # 3 new entries + 1 original purchase entry
         
-        # Check entries are ordered by datetime descending (newest first)
+        # Check entries are ordered by date descending (newest first)
         # Skip the first entry as it's the purchase entry with current timestamp
         market_entries: list[dict[str, Any]] = [entry for entry in history if entry["type"] == "c"]
-        market_datetimes: list[str] = [entry["datetime"] for entry in market_entries]
-        expected_order: list[str] = ["2024-01-15T10:00:00", "2024-01-12T10:00:00", "2024-01-10T10:00:00"]
-        assert market_datetimes == expected_order
+        market_dates: list[str] = [entry["date"] for entry in market_entries]
+        expected_order: list[str] = ["2024-01-15", "2024-01-12", "2024-01-10"]
+        assert market_dates == expected_order
 
     def test_update_price_history_entry(self, authenticated_client: TestClient, test_user: User, test_item: Item):
         """
         Flow: Add price entry -> PATCH to update it
-        Expected: 200 OK with updated price and datetime
+        Expected: 200 OK with updated price and date
         """
         # Add a price entry
-        price_data: dict[str, Any] = {"price": 10000, "datetime": "2024-01-10T10:00:00"}
+        price_data: dict[str, Any] = {"price": 10000, "date": "2024-01-10"}
         create_response: Response = authenticated_client.post(f"/api/items/{test_item.id}/price-history", json=price_data)
         assert create_response.status_code == status.HTTP_201_CREATED
         
@@ -105,7 +105,7 @@ class TestItemPriceHistory:
         # Update the entry
         update_data: dict[str, Any] = {
             "price": 15000,
-            "datetime": "2024-01-10T15:00:00"
+            "date": "2024-01-15"
         }
         
         response: Response = authenticated_client.patch(f"/api/items/{test_item.id}/price-history/{entry_id}", json=update_data)
@@ -113,7 +113,7 @@ class TestItemPriceHistory:
         
         updated_entry: dict[str, Any] = response.json()
         assert updated_entry["price"] == update_data["price"]
-        assert updated_entry["datetime"] == update_data["datetime"]
+        assert updated_entry["date"] == update_data["date"]
 
     def test_delete_current_price_entry(self, authenticated_client: TestClient, test_user: User, test_item: Item):
         """
@@ -207,7 +207,7 @@ class TestItemPriceHistory:
         Expected: 200 OK with price_history array included
         """
         # Add a price entry
-        price_data: dict[str, Any] = {"price": 12000, "datetime": "2024-01-15T10:00:00"}
+        price_data: dict[str, Any] = {"price": 12000, "date": "2024-01-15"}
         create_response: Response = authenticated_client.post(f"/api/items/{test_item.id}/price-history", json=price_data)
         assert create_response.status_code == status.HTTP_201_CREATED
         
@@ -219,10 +219,10 @@ class TestItemPriceHistory:
         assert "price_history" in item_data
         assert len(item_data["price_history"]) == 2  # Purchase + current price
         
-        # Verify price history is ordered by datetime descending
+        # Verify price history is ordered by date descending
         price_history: list[dict[str, Any]] = item_data["price_history"]
-        datetimes: list[str] = [entry["datetime"] for entry in price_history]
-        assert datetimes == sorted(datetimes, reverse=True)
+        dates: list[str] = [entry["date"] for entry in price_history]
+        assert dates == sorted(dates, reverse=True)
 
     def test_price_history_workflow(self, authenticated_client: TestClient, test_user: User):
         """
@@ -235,7 +235,7 @@ class TestItemPriceHistory:
             "year": "2024",
             "material": "gold",
             "purchase_price": 50000,  # $500 purchase price
-            "purchase_date": "2024-01-01T10:00:00"
+            "purchase_date": "2024-01-01"
         }
         
         create_response: Response = authenticated_client.post("/api/items/", json=item_data)
@@ -244,9 +244,9 @@ class TestItemPriceHistory:
         
         # Step 2: Add current market prices over time
         market_prices: list[dict[str, Any]] = [
-            {"price": 52000, "datetime": "2024-01-15T10:00:00"},  # Price went up
-            {"price": 48000, "datetime": "2024-01-20T10:00:00"},  # Price went down
-            {"price": 55000, "datetime": "2024-01-25T10:00:00"},  # Price went up again
+            {"price": 52000, "date": "2024-01-15"},  # Price went up
+            {"price": 48000, "date": "2024-01-20"},  # Price went down
+            {"price": 55000, "date": "2024-01-25"},  # Price went up again
         ]
         
         created_entries: list[dict[str, Any]] = []

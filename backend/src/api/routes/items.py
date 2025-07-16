@@ -1,4 +1,4 @@
-from datetime import datetime as dt
+from datetime import date
 from typing import Any, Dict, Sequence
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -41,7 +41,7 @@ async def get_user_items(
             Item.user_id,
             Item.collection_id,
             ItemPriceHistory.price.label('purchase_price'),
-            ItemPriceHistory.datetime.label('purchase_date')
+            ItemPriceHistory.date.label('purchase_date')
         )
         .join(ItemPriceHistory, Item.id == ItemPriceHistory.item_id)
         .where(
@@ -84,7 +84,7 @@ async def create_item(
 ) -> ItemReadWithPurchasePrice:
     item_dict: Dict[str, Any] = item_data.model_dump()
     purchase_price: int = item_dict.pop('purchase_price')
-    purchase_date: dt = item_dict.pop('purchase_date', dt.now())
+    purchase_date: date | None = item_dict.pop('purchase_date', None)
 
     item: Item = Item(**item_dict, user_id=current_user.id)
     session.add(item)
@@ -94,7 +94,7 @@ async def create_item(
         item_id=item.id,
         price=purchase_price,
         type=PriceType.PURCHASE,
-        datetime=purchase_date
+        date=purchase_date
     )
     session.add(price_history)
     
@@ -113,7 +113,7 @@ async def create_item(
         user_id=item.user_id,
         collection_id=item.collection_id,
         purchase_price=price_history.price,
-        purchase_date=price_history.datetime
+        purchase_date=price_history.date
     )
 
 
@@ -211,7 +211,7 @@ async def get_item_price_history(
     result: Result[Any] = await session.execute(
         select(ItemPriceHistory)
         .where(ItemPriceHistory.item_id == item.id)
-        .order_by(ItemPriceHistory.datetime.desc())
+        .order_by(ItemPriceHistory.date.desc())
     )
     return result.scalars().all()
 
@@ -226,7 +226,7 @@ async def add_item_price_history(
         item_id=item.id,
         price=price_data.price,
         type=PriceType.CURRENT,
-        datetime=price_data.datetime or dt.now()
+        date=price_data.date
     )
     
     session.add(price_history)

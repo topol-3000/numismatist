@@ -40,5 +40,5 @@ class Item(Base, UuidPkMixin):
         'ItemPriceHistory',
         back_populates='item',
         cascade='all, delete-orphan',
-        order_by='ItemPriceHistory.datetime.desc()'
+        order_by='ItemPriceHistory.date.desc()'
     )

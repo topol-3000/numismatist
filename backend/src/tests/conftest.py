@@ -1,5 +1,5 @@
 """Test configuration and fixtures."""
-from datetime import datetime as dt
+from datetime import date
 from typing import AsyncGenerator
 import pytest
 import pytest_asyncio
@@ -168,7 +168,7 @@ async def test_item(test_session, test_user) -> Item:
         item_id=item.id,
         price=50000,  # $500 in pennies
         type=PriceType.PURCHASE,
-        datetime=dt.now()
+        date=date.today()
     )
     test_session.add(price_history)
     
