@@ -21,12 +21,12 @@ class ItemPriceHistory(Base, IdIntPkMixin):
     """
     __tablename__ = 'item_price_history'
 
-    price: Mapped[int] = mapped_column(BigInteger, nullable=False, comment="Price in pennies/cents")
-    datetime: Mapped[dt] = mapped_column(DateTime(timezone=True), nullable=False, default=dt.now)
-    type: Mapped[PriceType] = mapped_column(nullable=False, index=True)
+    price: Mapped[int] = mapped_column(BigInteger, comment="Price in pennies/cents")
+    datetime: Mapped[dt] = mapped_column(DateTime(timezone=True), default=dt.now)
+    type: Mapped[PriceType] = mapped_column(index=True)
 
     # Foreign keys
-    item_id: Mapped[str] = mapped_column(ForeignKey('items.id'), nullable=False, index=True)
+    item_id: Mapped[str] = mapped_column(ForeignKey('items.id'), index=True)
 
     # Relationships
     item: Mapped['Item'] = relationship('Item', back_populates='price_history')

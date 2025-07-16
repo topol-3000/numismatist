@@ -18,8 +18,7 @@ class Material(StrEnum):
 
 class PriceType(StrEnum):
     """Price type for item price history tracking."""
-    PURCHASE = 'i'  # purchase price
-    SOLD = 's'      # sold price
+    PURCHASE = 'p'  # purchase price
     CURRENT = 'c'   # current market price
 
 

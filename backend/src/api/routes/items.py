@@ -1,11 +1,14 @@
 from datetime import datetime as dt
+from typing import Any, Dict, Sequence
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, Depends
-from sqlalchemy import exists, select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.engine import Result
 
 from api.dependency.database import SessionDependency
+from api.dependency.item import verify_item_ownership
 from api.routes.fastapi_users import current_active_user
 from models import Item, User, ItemPriceHistory
 from schemas.item import ItemCreate, ItemRead, ItemReadWithPurchasePrice, ItemUpdate, ItemReadWithPriceHistory
@@ -17,15 +20,16 @@ from schemas.item_price_history import (
 from utils.enums import PriceType
 
 router = APIRouter(prefix='/items', tags=['Items'])
+price_history_router = APIRouter(prefix='/{item_id}/price-history', tags=['Price History'])
 
 
 @router.get('/', response_model=list[ItemReadWithPurchasePrice])
 async def get_user_items(
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
-):
+) -> list[ItemReadWithPurchasePrice]:
     """Get all items for the current user with their purchase price information."""
-    result = await session.execute(
+    result: Result[Any] = await session.execute(
         select(
             Item.id,
             Item.name,
@@ -47,7 +51,7 @@ async def get_user_items(
         .order_by(Item.name)
     )
 
-    return [dict(row._mapping) for row in result]
+    return [ItemReadWithPurchasePrice(**dict(row._mapping)) for row in result]
 
 
 @router.get('/{item_id}', response_model=ItemReadWithPriceHistory)
@@ -55,13 +59,13 @@ async def get_item(
     item_id: UUID,
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
-):
-    result = await session.execute(
+) -> Item:
+    result: Result[Any] = await session.execute(
         select(Item)
         .options(selectinload(Item.price_history))
         .where(Item.id == str(item_id), Item.user_id == current_user.id)
     )
-    item = result.scalar_one_or_none()
+    item: Item | None = result.scalar_one_or_none()
     
     if not item:
         raise HTTPException(
@@ -77,44 +81,37 @@ async def create_item(
     item_data: ItemCreate,
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
-):
-    item_dict = item_data.model_dump()
-    purchase_price = item_dict.pop('purchase_price')
-    purchase_date = item_dict.pop('purchase_date', None)
+) -> ItemReadWithPurchasePrice:
+    item_dict: Dict[str, Any] = item_data.model_dump()
+    purchase_price: int = item_dict.pop('purchase_price')
+    purchase_date: dt = item_dict.pop('purchase_date', dt.now())
 
-    item = Item(**item_dict, user_id=current_user.id)
+    item: Item = Item(**item_dict, user_id=current_user.id)
     session.add(item)
     await session.flush()
 
-    # Access the ID while the session is still active
-    item_id = item.id
-    
-    price_history = ItemPriceHistory(
-        item_id=item_id,
+    price_history: ItemPriceHistory = ItemPriceHistory(
+        item_id=item.id,
         price=purchase_price,
         type=PriceType.PURCHASE,
-        datetime=purchase_date or dt.now()
+        datetime=purchase_date
     )
     session.add(price_history)
     
-    # Access all attributes while the session is still active
-    item_data_for_response = {
-        'id': item_id,
-        'name': item.name,
-        'year': item.year,
-        'description': item.description,
-        'images': item.images,
-        'material': item.material,
-        'weight': item.weight,
-        'user_id': item.user_id,
-        'collection_id': item.collection_id,
-    }
-    
     await session.commit()
+    await session.refresh(item)
     await session.refresh(price_history)
 
     return ItemReadWithPurchasePrice(
-        **item_data_for_response,
+        id=item.id,
+        name=item.name,
+        year=item.year,
+        description=item.description,
+        images=item.images,
+        material=item.material,
+        weight=item.weight,
+        user_id=item.user_id,
+        collection_id=item.collection_id,
         purchase_price=price_history.price,
         purchase_date=price_history.datetime
     )
@@ -126,11 +123,11 @@ async def update_item(
     item_data: ItemUpdate,
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
-):
-    result = await session.execute(
+) -> Item:
+    result: Result[Any] = await session.execute(
         select(Item).where(Item.id == str(item_id), Item.user_id == current_user.id)
     )
-    item = result.scalar_one_or_none()
+    item: Item | None = result.scalar_one_or_none()
     
     if not item:
         raise HTTPException(
@@ -138,7 +135,7 @@ async def update_item(
             detail="Item not found"
         )
 
-    update_data = item_data.model_dump(exclude_unset=True)
+    update_data: Dict[str, Any] = item_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(item, field, value)
     
@@ -152,58 +149,25 @@ async def delete_item(
     item_id: UUID,
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
-):
+) -> None:
     """Delete an item and all its price history."""
     result = await session.execute(
-        select(Item).where(Item.id == str(item_id), Item.user_id == current_user.id)
+        delete(Item).where(Item.id == str(item_id), Item.user_id == current_user.id)
     )
-    item = result.scalar_one_or_none()
     
-    if not item:
+    if result.rowcount == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Item not found"
         )
     
-    await session.delete(item)
     await session.commit()
 
 
 # Price History Endpoints
 
-async def verify_item_ownership(
-    item_id: UUID,
-    current_user: User,
-    session: AsyncSession
-) -> None:
-    """
-    Verify that an item belongs to the current user.
-    
-    Args:
-        item_id: The UUID of the item to check
-        current_user: The current authenticated user
-        session: Database session
-        
-    Raises:
-        HTTPException: If item not found or not owned by current user
-    """
-    ownership_check = await session.scalar(
-        select(
-            exists().where(
-                Item.id == str(item_id),
-                Item.user_id == current_user.id
-            )
-        )
-    )
-    if not ownership_check:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Item not found or not owned by current user"
-        )
-
-
 async def get_price_history_entry(
-    item_id: UUID,
+    item_id: str,
     history_id: int,
     session: AsyncSession
 ) -> ItemPriceHistory:
@@ -221,14 +185,14 @@ async def get_price_history_entry(
     Raises:
         HTTPException: If price history entry not found
     """
-    history_result = await session.execute(
+    history_result: Result[Any] = await session.execute(
         select(ItemPriceHistory)
         .where(
             ItemPriceHistory.id == history_id,
-            ItemPriceHistory.item_id == str(item_id)
+            ItemPriceHistory.item_id == item_id
         )
     )
-    price_history = history_result.scalar_one_or_none()
+    price_history: ItemPriceHistory | None = history_result.scalar_one_or_none()
     
     if not price_history:
         raise HTTPException(
@@ -239,32 +203,27 @@ async def get_price_history_entry(
     return price_history
 
 
-@router.get('/{item_id}/price-history', response_model=list[ItemPriceHistoryRead])
+@price_history_router.get('/', response_model=list[ItemPriceHistoryRead])
 async def get_item_price_history(
-    item_id: UUID,
     session: SessionDependency,
-    current_user: User = Depends(current_active_user),
-):
-    await verify_item_ownership(item_id, current_user, session)
-
-    result = await session.execute(
+    item: Item = Depends(verify_item_ownership),
+) -> Sequence[ItemPriceHistory]:
+    result: Result[Any] = await session.execute(
         select(ItemPriceHistory)
-        .where(ItemPriceHistory.item_id == str(item_id))
+        .where(ItemPriceHistory.item_id == item.id)
+        .order_by(ItemPriceHistory.datetime.desc())
     )
     return result.scalars().all()
 
 
-@router.post('/{item_id}/price-history', response_model=ItemPriceHistoryRead, status_code=status.HTTP_201_CREATED)
+@price_history_router.post('/', response_model=ItemPriceHistoryRead, status_code=status.HTTP_201_CREATED)
 async def add_item_price_history(
-    item_id: UUID,
     price_data: ItemPriceHistoryCreate,
     session: SessionDependency,
-    current_user: User = Depends(current_active_user),
-):
-    await verify_item_ownership(item_id, current_user, session)
-
-    price_history = ItemPriceHistory(
-        item_id=str(item_id),
+    item: Item = Depends(verify_item_ownership),
+) -> ItemPriceHistory:
+    price_history: ItemPriceHistory = ItemPriceHistory(
+        item_id=item.id,
         price=price_data.price,
         type=PriceType.CURRENT,
         datetime=price_data.datetime or dt.now()
@@ -276,18 +235,16 @@ async def add_item_price_history(
     return price_history
 
 
-@router.patch('/{item_id}/price-history/{history_id}', response_model=ItemPriceHistoryRead)
+@price_history_router.patch('/{history_id}', response_model=ItemPriceHistoryRead)
 async def update_item_price_history(
-    item_id: UUID,
     history_id: int,
     price_data: ItemPriceHistoryUpdate,
     session: SessionDependency,
-    current_user: User = Depends(current_active_user),
-):
-    await verify_item_ownership(item_id, current_user, session)
-    price_history = await get_price_history_entry(item_id, history_id, session)
+    item: Item = Depends(verify_item_ownership),
+) -> ItemPriceHistory:
+    price_history: ItemPriceHistory = await get_price_history_entry(item.id, history_id, session)
 
-    update_data = price_data.model_dump(exclude_unset=True)
+    update_data: Dict[str, Any] = price_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(price_history, field, value)
     
@@ -296,15 +253,13 @@ async def update_item_price_history(
     return price_history
 
 
-@router.delete('/{item_id}/price-history/{history_id}', status_code=status.HTTP_204_NO_CONTENT)
+@price_history_router.delete('/{history_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item_price_history(
-    item_id: UUID,
     history_id: int,
     session: SessionDependency,
-    current_user: User = Depends(current_active_user),
-):
-    await verify_item_ownership(item_id, current_user, session)
-    price_history = await get_price_history_entry(item_id, history_id, session)
+    item: Item = Depends(verify_item_ownership),
+) -> None:
+    price_history: ItemPriceHistory = await get_price_history_entry(item.id, history_id, session)
 
     if price_history.type != PriceType.CURRENT:
         raise HTTPException(
@@ -314,3 +269,6 @@ async def delete_item_price_history(
 
     await session.delete(price_history)
     await session.commit()
+
+
+router.include_router(price_history_router)

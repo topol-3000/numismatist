@@ -288,6 +288,30 @@ async def another_user_collection(test_session, another_user) -> Collection:
     return collection
 
 
+@pytest.fixture(scope="function") 
+def another_user_client(test_session, another_user):
+    """Create a test client with another user authentication override."""
+    
+    def override_get_session():
+        return test_session
+    
+    def override_current_user():
+        return another_user
+    
+    # Override the dependencies  
+    app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[current_active_user] = override_current_user
+    
+    # Also override FastAPI-Users internal dependencies
+    app.dependency_overrides[fastapi_users.current_user(active=True)] = override_current_user
+    app.dependency_overrides[fastapi_users.current_user(active=True, verified=True)] = override_current_user
+    
+    with TestClient(app) as test_client:
+        yield test_client
+    
+    app.dependency_overrides.clear()
+
+
 def get_auth_headers(user_id: int) -> dict:
     """Get authentication headers for testing."""
     # For testing, we'll mock the authentication

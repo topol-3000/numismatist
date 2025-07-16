@@ -44,4 +44,4 @@ class ItemReadWithPurchasePrice(ItemRead):
 
 class ItemReadWithPriceHistory(ItemRead):
     """Extended item schema that includes complete price history for detailed views."""
-    price_history: Annotated[list[ItemPriceHistoryRead], Field(description="Complete price history entries for this item")]
+    price_history: Annotated[list[ItemPriceHistoryRead], Field(description="Complete price history entries for this item", default_factory=list)]

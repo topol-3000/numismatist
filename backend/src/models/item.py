@@ -18,16 +18,16 @@ if TYPE_CHECKING:
 class Item(Base, UuidPkMixin):
     __tablename__ = 'items'
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    year: Mapped[str] = mapped_column(String(10), nullable=False)
+    name: Mapped[str] = mapped_column(String(255))
+    year: Mapped[str] = mapped_column(String(10))
     description: Mapped[str | None] = mapped_column(Text)
     images: Mapped[str | None] = mapped_column(Text)  # JSON string with image paths/urls
-    material: Mapped[Material] = mapped_column(nullable=False)
+    material: Mapped[Material] = mapped_column()
     weight: Mapped[float | None] = mapped_column(Float)
     
     # Foreign keys
-    user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'), nullable=False)
-    collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'), nullable=True)
+    user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'))
+    collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'))
     
     # Relationships
     user: Mapped['User'] = relationship('User', back_populates='items')
