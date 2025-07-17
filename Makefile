@@ -15,7 +15,7 @@ RED = \033[0;31m
 RESET = \033[0m
 
 # Define all phony targets (targets that don't produce a file with the target's name)
-.PHONY: help setup up build down build-up clean prepare-env-files test frontend-test frontend-lint frontend-format
+.PHONY: help setup up build down build-up clean prepare-env-files test frontend-test frontend-lint frontend-format backend-lint backend-format
 
 # Default target when just 'make' is executed
 .DEFAULT_GOAL := help
@@ -35,6 +35,10 @@ help:
 	@echo "  ${GREEN}make frontend-test${RESET}         - Run frontend tests"
 	@echo "  ${GREEN}make frontend-lint${RESET}         - Lint frontend code"
 	@echo "  ${GREEN}make frontend-format${RESET}       - Format frontend code"
+	@echo ""
+	@echo "${CYAN}Backend Commands:${RESET}"
+	@echo "  ${GREEN}make backend-lint${RESET}          - Lint backend code with ruff"
+	@echo "  ${GREEN}make backend-format${RESET}        - Format backend code with ruff"
 	@echo ""
 	@echo "${CYAN}Migration Commands:${RESET}"
 	@echo "  ${GREEN}make generate-migration name=...${RESET} - Generate a new migration"
@@ -149,3 +153,14 @@ frontend-lint:
 frontend-format:
 	@echo "${CYAN}Formatting frontend code...${RESET}"
 	@${DOCKER_COMPOSE_CMD} run --rm numismatist_frontend npm run format
+
+# =================================================
+# BACKEND COMMANDS
+# =================================================
+backend-lint:
+	@echo "${CYAN}Linting backend code with ruff...${RESET}"
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff check ."
+
+backend-format:
+	@echo "${CYAN}Formatting backend code with ruff...${RESET}"
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff format ."

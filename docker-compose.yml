@@ -12,6 +12,7 @@ services:
       - "8099:8000"
     volumes:
       - ./backend/src:/app
+      - ./backend/pyproject.toml:/app/pyproject.toml
     depends_on:
       numismatist_db:
         condition: service_healthy
@@ -26,6 +27,7 @@ services:
     profiles: [ "tools" ]
     volumes:
       - ./backend/src:/app
+      - ./backend/pyproject.toml:/app/pyproject.toml
     depends_on:
       numismatist_db:
         condition: service_healthy
@@ -40,6 +42,7 @@ services:
     profiles: [ "tools" ]
     volumes:
       - ./backend/src:/app
+      - ./backend/pyproject.toml:/app/pyproject.toml
     networks:
       - numismatist_net
 

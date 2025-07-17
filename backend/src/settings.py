@@ -10,11 +10,11 @@ BASE_DIR = Path(__file__).resolve()
 
 
 class APISettings(BaseModel):
-    title: str = 'Numismatist'
-    description: str = 'API for numismatist backend'
-    version: str = '0.0.1'
+    title: str = "Numismatist"
+    description: str = "API for numismatist backend"
+    version: str = "0.0.1"
     port: Annotated[int, Field(default=8000, ge=1, le=65535)]
-    cors_origins: Annotated[list[str], Field(default=['*'])]
+    cors_origins: Annotated[list[str], Field(default=["*"])]
 
 
 class DatabaseSettings(BaseModel):
@@ -29,7 +29,7 @@ class DatabaseSettings(BaseModel):
 
     @property
     def dsn(self) -> str:
-        return f'postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}'
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
 class AccessTokenSettings(BaseModel):
@@ -39,11 +39,11 @@ class AccessTokenSettings(BaseModel):
 
 
 class LogLevel(str, Enum):
-    DEBUG = 'DEBUG'
-    INFO = 'INFO'
-    ERROR = 'ERROR'
-    WARNING = 'WARNING'
-    CRITICAL = 'CRITICAL'
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
 
 
 class LoggerSettings(BaseModel):
@@ -57,7 +57,10 @@ class Settings(BaseSettings):
     logger: LoggerSettings = LoggerSettings()
 
     model_config = SettingsConfigDict(
-        env_file=(BASE_DIR / '.env',), env_nested_delimiter='__', env_prefix='', case_sensitive=False
+        env_file=(BASE_DIR / ".env",),
+        env_nested_delimiter="__",
+        env_prefix="",
+        case_sensitive=False,
     )
 
 
@@ -66,10 +69,10 @@ try:
 except Exception as e:
     if isinstance(e, ValidationError):
         for err in e.errors():
-            loc = '.'.join(str(p) for p in err['loc'])
-            msg = err['msg']
-            print(f'Missing or invalid setting: {loc} → {msg}', file=sys.stderr)
+            loc = ".".join(str(p) for p in err["loc"])
+            msg = err["msg"]
+            print(f"Missing or invalid setting: {loc} → {msg}", file=sys.stderr)
     else:
-        print(f'Configuration error: {e}', file=sys.stderr)
+        print(f"Configuration error: {e}", file=sys.stderr)
 
     sys.exit(1)

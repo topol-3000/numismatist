@@ -19,3 +19,43 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
 ]
+
+[tool.ruff]
+# Target Python 3.12
+target-version = "py312"
+
+# Include only source files, exclude tests
+extend-exclude = [
+    "tests",
+    "migrations",
+    "__pycache__",
+]
+
+# Set the maximum line length
+line-length = 120
+
+[tool.ruff.lint]
+# Enable a comprehensive set of linting rules
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+
+ignore = [
+    "B008",  # Do not perform function calls in argument defaults (FastAPI dependency injection pattern)
+]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces around the equals sign in keyword arguments
+indent-style = "space"
+
+# Automatically format docstrings
+docstring-code-format = true

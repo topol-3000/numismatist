@@ -1,0 +1,164 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Code Linting (Ruff)
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/Pipfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+        
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --dev --system --deploy
+        
+    - name: Verify ruff installation
+      run: |
+        echo "Verifying ruff installation..."
+        ruff --version
+        
+    - name: Debug project structure
+      working-directory: ./backend
+      run: |
+        echo "Backend directory contents:"
+        ls -la
+        echo "Source directory contents:"
+        ls -la src/
+        
+    - name: Run ruff check
+      working-directory: ./backend/src
+      run: |
+        echo "🔍 Running ruff linting..."
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        ruff check . --output-format=github
+        
+    - name: Run ruff format check
+      working-directory: ./backend/src
+      run: |
+        echo "🎨 Checking code formatting..."
+        ruff format --check --diff .
+
+  test:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: numismatist_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/Pipfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+        
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --dev --system --deploy
+        
+    - name: Run tests
+      working-directory: ./backend/src
+      env:
+        # Database settings (using nested delimiter __)
+        DATABASE__HOST: localhost
+        DATABASE__PORT: 5432
+        DATABASE__USER: postgres
+        DATABASE__PASSWORD: postgres
+        DATABASE__NAME: numismatist_test
+        DATABASE__DEBUG: true
+        
+        # Access token settings (using nested delimiter __)
+        ACCESS_TOKEN__LIFETIME_SECONDS: 3600
+        ACCESS_TOKEN__RESET_PASSWORD_TOKEN_SECRET: test-reset-secret-for-ci
+        ACCESS_TOKEN__VERIFICATION_TOKEN_SECRET: test-verification-secret-for-ci
+        
+        # Legacy environment variables (if needed by tests)
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/numismatist_test
+        SECRET_KEY: test-secret-key-for-ci
+        ALGORITHM: HS256
+        ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      run: |
+        echo "🧪 Running tests..."
+        python -m pytest tests/ -v --tb=short
+
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Build Test
+    needs: [lint, test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      working-directory: ./backend
+      run: |
+        echo "🐳 Building Docker image..."
+        docker build -t numismatist-backend:test .
+        
+    - name: Test Docker image
+      run: |
+        echo "🔬 Testing Docker image..."
+        docker run --rm numismatist-backend:test python --version
