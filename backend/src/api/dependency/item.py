@@ -36,6 +36,6 @@ async def verify_item_ownership(
     if not item:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Item not found or not owned by current user"
+            detail="Item not found"
         )
     return item
