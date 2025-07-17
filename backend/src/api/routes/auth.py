@@ -4,7 +4,7 @@ from api.dependency.authentication.backend import authentication_backend
 from api.routes.fastapi_users import fastapi_users
 from schemas.user import UserCreate, UserRead
 
-router = APIRouter(prefix='/auth', tags=['Auth'])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # /login
 # /logout

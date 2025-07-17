@@ -1,9 +1,14 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from logging import Logger
-from typing import AsyncGenerator
 
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from settings import DatabaseSettings, settings
 from utils import exceptions
@@ -16,10 +21,16 @@ logger: Logger = get_logger(__name__)
 class Database:
     def __init__(self, settings: DatabaseSettings) -> None:
         self.__engine: AsyncEngine = create_async_engine(
-            url=settings.dsn, pool_size=settings.pool_size, max_overflow=settings.max_overflow
+            url=settings.dsn,
+            pool_size=settings.pool_size,
+            max_overflow=settings.max_overflow,
         )
         self.__session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker[AsyncSession](
-            bind=self.__engine, autoflush=False, autocommit=False, expire_on_commit=False, class_=AsyncSession
+            bind=self.__engine,
+            autoflush=False,
+            autocommit=False,
+            expire_on_commit=False,
+            class_=AsyncSession,
         )
 
     @asynccontextmanager
@@ -46,9 +57,10 @@ class Database:
             yield session
         except (SQLAlchemyError, DBAPIError) as error:
             await session.rollback()
-            logger.exception('Failed to execute a database query')
+            logger.exception("Failed to execute a database query")
             raise exceptions.DatabaseError(
-                message=f'Failed to execute a database query. Cause: {error}', code=ErrorCode.UNHANDLED_DATABASE_ERROR
+                message=f"Failed to execute a database query. Cause: {error}",
+                code=ErrorCode.UNHANDLED_DATABASE_ERROR,
             ) from error
         finally:
             await session.close()

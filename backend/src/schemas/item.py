@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Annotated
+
 from pydantic import Field
 
 from schemas.base import SchemaConfigMixin
@@ -21,6 +22,7 @@ class ItemCreate(ItemBase):
     purchase_price: Annotated[int, Field(ge=0, description="Purchase price in pennies/cents")]
     purchase_date: Annotated[date | None, Field(description="Date when the item was purchased")] = None
 
+
 class ItemUpdate(SchemaConfigMixin):
     name: Annotated[str | None, Field(min_length=1, max_length=255, description="Descriptive name")] = None
     year: Annotated[str | None, Field(min_length=1, max_length=10, description="Year of issue/mint")] = None
@@ -38,10 +40,18 @@ class ItemRead(ItemBase):
 
 class ItemReadWithPurchasePrice(ItemRead):
     """Extended item schema that includes purchase price and date."""
+
     purchase_price: Annotated[int, Field(ge=0, description="Purchase price in pennies/cents")]
     purchase_date: Annotated[date, Field(description="Date when the item was purchased")]
 
 
 class ItemReadWithPriceHistory(ItemRead):
     """Extended item schema that includes complete price history for detailed views."""
-    price_history: Annotated[list[ItemPriceHistoryRead], Field(description="Complete price history entries for this item", default_factory=list)]
+
+    price_history: Annotated[
+        list[ItemPriceHistoryRead],
+        Field(
+            description="Complete price history entries for this item",
+            default_factory=list,
+        ),
+    ]

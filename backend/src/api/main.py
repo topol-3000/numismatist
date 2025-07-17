@@ -1,6 +1,6 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from logging import Logger
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,9 +16,9 @@ logger: Logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    logger.info('Starting API server')
+    logger.info("Starting API server")
     yield
-    logger.info('Gracefully shutdown API server')
+    logger.info("Gracefully shutdown API server")
     await database.close()
 
 
@@ -37,16 +37,16 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.api.cors_origins,
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
-@app.get('/')
+@app.get("/")
 async def root():
-    return {'message': 'Numismatist API'}
+    return {"message": "Numismatist API"}
 
 
-@app.get('/health')
+@app.get("/health")
 async def health_check():
-    return {'status': 'ok'}
+    return {"status": "ok"}

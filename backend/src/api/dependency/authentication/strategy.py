@@ -16,4 +16,7 @@ async def get_access_tokens_db(session: SessionDependency):
 def get_database_strategy(
     access_tokens_db: Annotated[AccessTokenDatabase[AccessToken], Depends(get_access_tokens_db)],
 ) -> DatabaseStrategy:
-    return DatabaseStrategy(database=access_tokens_db, lifetime_seconds=settings.access_token.lifetime_seconds)
+    return DatabaseStrategy(
+        database=access_tokens_db,
+        lifetime_seconds=settings.access_token.lifetime_seconds,
+    )
