@@ -12,23 +12,22 @@ from .mixins.uuid_pk import UuidPkMixin
 if TYPE_CHECKING:
     from .user import User
     from .collection import Collection
+    from .item_price_history import ItemPriceHistory
 
 
 class Item(Base, UuidPkMixin):
     __tablename__ = 'items'
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    year: Mapped[str] = mapped_column(String(10), nullable=False)
+    name: Mapped[str] = mapped_column(String(255))
+    year: Mapped[str] = mapped_column(String(10))
     description: Mapped[str | None] = mapped_column(Text)
     images: Mapped[str | None] = mapped_column(Text)  # JSON string with image paths/urls
-    material: Mapped[Material] = mapped_column(nullable=False)
+    material: Mapped[Material] = mapped_column()
     weight: Mapped[float | None] = mapped_column(Float)
     
-    # Foreign key to user
-    user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'), nullable=False)
-    
-    # Foreign key to collection (optional - an item may not be in any collection)
-    collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'), nullable=True)
+    # Foreign keys
+    user_id: Mapped[UserIdType] = mapped_column(ForeignKey('users.id'))
+    collection_id: Mapped[str | None] = mapped_column(ForeignKey('collections.id'))
     
     # Relationships
     user: Mapped['User'] = relationship('User', back_populates='items')
@@ -36,4 +35,10 @@ class Item(Base, UuidPkMixin):
         'Collection', 
         back_populates='items',
         lazy='select'
+    )
+    price_history: Mapped[list['ItemPriceHistory']] = relationship(
+        'ItemPriceHistory',
+        back_populates='item',
+        cascade='all, delete-orphan',
+        order_by='ItemPriceHistory.date.desc()'
     )

@@ -1,4 +1,5 @@
 """Test configuration and fixtures."""
+from datetime import date
 from typing import AsyncGenerator
 import pytest
 import pytest_asyncio
@@ -12,8 +13,10 @@ from api.routes.fastapi_users import current_active_user, current_active_superus
 from models.base import Base
 from models.user import User
 from models.item import Item
+from models.item_price_history import ItemPriceHistory
 from models.collection import Collection
 from utils.tokens import generate_share_token
+from utils.enums import PriceType
 
 
 # Test database URL (in-memory SQLite for fast tests)
@@ -147,7 +150,8 @@ async def test_superuser(test_session) -> User:
 
 @pytest_asyncio.fixture
 async def test_item(test_session, test_user) -> Item:
-    """Create a test item."""
+    """Create a test item with price history."""
+    
     item = Item(
         name="Test Coin",
         year="2024",
@@ -157,6 +161,17 @@ async def test_item(test_session, test_user) -> Item:
         user_id=test_user.id,
     )
     test_session.add(item)
+    await test_session.flush()  # Get the item ID
+    
+    # Create a purchase price history entry
+    price_history = ItemPriceHistory(
+        item_id=item.id,
+        price=50000,  # $500 in pennies
+        type=PriceType.PURCHASE,
+        date=date.today()
+    )
+    test_session.add(price_history)
+    
     await test_session.commit()
     await test_session.refresh(item)
     # Expunge from session to avoid greenlet issues in tests
@@ -271,6 +286,30 @@ async def another_user_collection(test_session, another_user) -> Collection:
     # Expunge from session to avoid greenlet issues in tests
     test_session.expunge(collection)
     return collection
+
+
+@pytest.fixture(scope="function") 
+def another_user_client(test_session, another_user):
+    """Create a test client with another user authentication override."""
+    
+    def override_get_session():
+        return test_session
+    
+    def override_current_user():
+        return another_user
+    
+    # Override the dependencies  
+    app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[current_active_user] = override_current_user
+    
+    # Also override FastAPI-Users internal dependencies
+    app.dependency_overrides[fastapi_users.current_user(active=True)] = override_current_user
+    app.dependency_overrides[fastapi_users.current_user(active=True, verified=True)] = override_current_user
+    
+    with TestClient(app) as test_client:
+        yield test_client
+    
+    app.dependency_overrides.clear()
 
 
 def get_auth_headers(user_id: int) -> dict:
