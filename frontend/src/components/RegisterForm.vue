@@ -199,8 +199,8 @@ const handleSubmit = async () => {
   })
 
   if (success) {
-    // Redirect to dashboard or welcome page
-    router.push('/')
+    // Redirect to dashboard after successful registration
+    router.push({ name: 'dashboard' })
   } else {
     errorMessage.value = 'Registration failed. Please check your information and try again.'
   }
@@ -209,7 +209,7 @@ const handleSubmit = async () => {
 // Redirect if already authenticated
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    router.push('/')
+    router.push({ name: 'dashboard' })
   }
 })
 </script>
