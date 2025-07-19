@@ -70,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const initializeAuth = async (): Promise<void> => {
     if (!token.value) return
+    if (isLoading.value) return
 
     try {
       isLoading.value = true

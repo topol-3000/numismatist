@@ -33,8 +33,7 @@ class HttpClient {
         if (error.response?.status === 401) {
           // Clear token on unauthorized
           const authStore = useAuthStore()
-          authStore.token = null
-          authStore.user = null
+          authStore.logout()
         }
         const message = error.response?.data?.detail || error.message || 'Request failed'
         throw new Error(message)

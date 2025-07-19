@@ -30,9 +30,12 @@ const router = createRouter({
     // Admin routes - nested under /admin
     {
       path: '/admin',
-      redirect: '/admin/dashboard',
       meta: { requiresAuth: true },
       children: [
+        {
+          path: '',
+          redirect: 'dashboard',
+        },
         {
           path: 'dashboard',
           name: 'dashboard',
@@ -81,8 +84,23 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  // If there's a token but no user data and we're not already loading, initialize auth
+  if (authStore.token && !authStore.user && !authStore.isLoading) {
+    await authStore.initializeAuth()
+  }
+
+  // If auth is currently loading, wait for it to complete
+  if (authStore.isLoading) {
+    // Wait for auth to complete (with timeout to prevent infinite wait)
+    let attempts = 0
+    while (authStore.isLoading && attempts < 50) { // 5 second timeout
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+  }
 
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

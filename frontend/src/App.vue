@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { computed } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppNavbar from '@/components/AppNavbar.vue'
@@ -10,11 +10,6 @@ const route = useRoute()
 // Hide the main navbar for admin routes when authenticated
 const showMainNavbar = computed(() => {
   return !authStore.isAuthenticated || !route.path.startsWith('/admin')
-})
-
-onMounted(() => {
-  // Initialize authentication state on app startup
-  authStore.initializeAuth()
 })
 </script>
 
