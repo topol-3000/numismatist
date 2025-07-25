@@ -18,8 +18,9 @@ class ItemImage(Base, UuidPkMixin):
     __tablename__ = "item_images"
 
     # Fields
-    type: Mapped[ImageType] = mapped_column(Enum(ImageType, validate_strings=True), index=True,
-                                            comment="Type of the image (e.g., front, back)")
+    type: Mapped[ImageType] = mapped_column(
+        Enum(ImageType, validate_strings=True), index=True, comment="Type of the image (e.g., front, back)"
+    )
     file_path: Mapped[str] = mapped_column(String(512), comment="Storage path (S3 key or local path)")
     file_size: Mapped[int | None] = mapped_column(comment="File size in bytes")
     mime_type: Mapped[str | None] = mapped_column(String(100), comment="MIME type (e.g., image/jpeg)")

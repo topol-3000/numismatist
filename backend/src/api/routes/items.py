@@ -320,7 +320,7 @@ async def upload_item_image(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"An image of type '{file_type}' already exists for this item. "
-                       f"Please delete the existing image first."
+                f"Please delete the existing image first.",
             )
 
     # Upload file to an external storage
