@@ -16,6 +16,8 @@ services:
     depends_on:
       numismatist_db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     networks:
       - numismatist_net
 
@@ -31,6 +33,8 @@ services:
     depends_on:
       numismatist_db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     networks:
       - numismatist_net
 
@@ -43,6 +47,9 @@ services:
     volumes:
       - ./backend/src:/app
       - ./backend/pyproject.toml:/app/pyproject.toml
+    depends_on:
+      minio:
+        condition: service_healthy
     networks:
       - numismatist_net
 
@@ -79,8 +86,50 @@ services:
     networks:
       - numismatist_net
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"  # MinIO API
+      - "9001:9001"  # MinIO Console
+    volumes:
+      - numismatist_minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - numismatist_net
+
+  numismatist_minio_setup:
+    image: minio/mc:latest
+    profiles: ["tools"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    network_mode: "service:minio"
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO to be ready...';
+      sleep 5;
+      echo 'Setting up MinIO alias...';
+      mc alias set minio http://localhost:9000 minioadmin minioadmin;
+      echo 'Creating bucket...';
+      mc mb minio/numismatist --ignore-existing;
+      echo 'Setting bucket policy...';
+      mc anonymous set public minio/numismatist;
+      echo 'Listing buckets to verify...';
+      mc ls minio/;
+      echo 'MinIO bucket setup complete';
+      "
+
 volumes:
   numismatist_pg-data:
+  numismatist_minio-data:
 
 networks:
   numismatist_net:

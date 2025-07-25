@@ -19,8 +19,30 @@ class Material(StrEnum):
 class PriceType(StrEnum):
     """Price type for item price history tracking."""
 
-    PURCHASE = "p"  # purchase price
-    CURRENT = "c"  # current market price
+    PURCHASE = "purchase"
+    CURRENT = "current"
+
+
+class ImageType(StrEnum):
+    """Image type for item images."""
+
+    FRONT = "front"
+    BACK = "back"
+    ADDITIONAL = "additional"
+
+    def is_unique(self) -> bool:
+        """Return True if this image type should be unique per item."""
+        return self in {self.FRONT, self.BACK}
+
+    @classmethod
+    def get_unique_types(cls) -> list["ImageType"]:
+        """Get all image types that should be unique per item."""
+        return [image_type for image_type in cls if image_type.is_unique()]
+
+    @classmethod
+    def get_non_unique_types(cls) -> list["ImageType"]:
+        """Get all image types that can have multiple instances per item."""
+        return [image_type for image_type in cls if not image_type.is_unique()]
 
 
 class ErrorCode(StrEnum):

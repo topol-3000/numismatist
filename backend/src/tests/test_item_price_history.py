@@ -22,7 +22,7 @@ class TestItemPriceHistory:
         assert response.status_code == status.HTTP_200_OK
         price_history: list[dict[str, Any]] = response.json()
         assert len(price_history) == 1  # Only purchase price entry
-        assert price_history[0]["type"] == "p"  # Purchase type
+        assert price_history[0]["type"] == "purchase"  # Purchase type
         assert price_history[0]["item_id"] == str(test_item.id)
 
     def test_add_current_price_entry(self, authenticated_client: TestClient, test_user: User, test_item: Item):
@@ -40,7 +40,7 @@ class TestItemPriceHistory:
         assert response.status_code == status.HTTP_201_CREATED
         price_entry: dict[str, Any] = response.json()
         assert price_entry["price"] == price_data["price"]
-        assert price_entry["type"] == "c"  # Current market price
+        assert price_entry["type"] == "current"  # Current market price
         assert price_entry["item_id"] == str(test_item.id)
 
     def test_add_price_without_date(self, authenticated_client: TestClient, test_user: User, test_item: Item):
@@ -57,7 +57,7 @@ class TestItemPriceHistory:
         assert response.status_code == status.HTTP_201_CREATED
         price_entry: dict[str, Any] = response.json()
         assert price_entry["price"] == price_data["price"]
-        assert price_entry["type"] == "c"
+        assert price_entry["type"] == "current"
         assert "date" in price_entry  # Should have auto-generated date
 
     def test_get_price_history_multiple_entries(self, authenticated_client: TestClient, test_user: User, test_item: Item):
@@ -85,7 +85,7 @@ class TestItemPriceHistory:
         
         # Check entries are ordered by date descending (newest first)
         # Skip the first entry as it's the purchase entry with current timestamp
-        market_entries: list[dict[str, Any]] = [entry for entry in history if entry["type"] == "c"]
+        market_entries: list[dict[str, Any]] = [entry for entry in history if entry["type"] == "current"]
         market_dates: list[str] = [entry["date"] for entry in market_entries]
         expected_order: list[str] = ["2024-01-15", "2024-01-12", "2024-01-10"]
         assert market_dates == expected_order
@@ -146,7 +146,7 @@ class TestItemPriceHistory:
         history: list[dict[str, Any]] = response.json()
         
         # Find the purchase entry (there's always exactly one purchase entry)
-        purchase_entries: list[dict[str, Any]] = [entry for entry in history if entry["type"] == "p"]
+        purchase_entries: list[dict[str, Any]] = [entry for entry in history if entry["type"] == "purchase"]
         purchase_entry: dict[str, Any] = purchase_entries[0]
         
         # Try to delete it

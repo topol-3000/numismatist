@@ -50,11 +50,30 @@ class LoggerSettings(BaseModel):
     level: LogLevel = LogLevel.DEBUG
 
 
+class StorageBackend(str, Enum):
+    S3 = "s3"
+    LOCAL = "local"
+
+
+class StorageSettings(BaseModel):
+    backend: StorageBackend = StorageBackend.LOCAL
+    # S3 settings
+    endpoint_url: str | None = None
+    access_key: str | None = None
+    secret_key: str | None = None
+    bucket_name: str = "numismatist"
+    region: str = "us-east-1"
+    public_url: str | None = None
+    # Local storage settings
+    local_path: str = "uploads"
+
+
 class Settings(BaseSettings):
     access_token: AccessTokenSettings
     api: APISettings = APISettings()
     database: DatabaseSettings
     logger: LoggerSettings = LoggerSettings()
+    storage: StorageSettings = StorageSettings()
 
     model_config = SettingsConfigDict(
         env_file=(BASE_DIR / ".env",),

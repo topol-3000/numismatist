@@ -1,7 +1,7 @@
 from datetime import date as dt_date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, Date, ForeignKey, func
+from sqlalchemy import BigInteger, Date, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.mixins.id_int_pk import IdIntPkMixin
@@ -24,7 +24,7 @@ class ItemPriceHistory(Base, IdIntPkMixin):
 
     price: Mapped[int] = mapped_column(BigInteger, comment="Price in pennies/cents")
     date: Mapped[dt_date] = mapped_column(Date, server_default=func.current_date())
-    type: Mapped[PriceType] = mapped_column(index=True)
+    type: Mapped[PriceType] = mapped_column(Enum(PriceType, validate_strings=True), index=True)
 
     # Foreign keys
     item_id: Mapped[str] = mapped_column(ForeignKey("items.id"), index=True)

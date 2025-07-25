@@ -15,7 +15,7 @@ RED = \033[0;31m
 RESET = \033[0m
 
 # Define all phony targets (targets that don't produce a file with the target's name)
-.PHONY: help setup up build down build-up clean prepare-env-files test frontend-test frontend-lint frontend-format backend-lint backend-format
+.PHONY: help setup up build down build-up clean prepare-env-files test frontend-test frontend-lint frontend-format backend-lint backend-format storage-setup
 
 # Default target when just 'make' is executed
 .DEFAULT_GOAL := help
@@ -30,6 +30,9 @@ help:
 	@echo "  ${GREEN}make down${RESET}                  - Stop and remove containers"
 	@echo "  ${GREEN}make build-up${RESET}              - Build and start containers"
 	@echo "  ${GREEN}make clean${RESET}                 - Clean up Docker resources"
+	@echo ""
+	@echo "${CYAN}Storage Commands:${RESET}"
+	@echo "  ${GREEN}make storage-setup${RESET}         - Setup MinIO bucket and permissions"
 	@echo ""
 	@echo "${CYAN}Frontend Commands:${RESET}"
 	@echo "  ${GREEN}make frontend-test${RESET}         - Run frontend tests"
@@ -129,7 +132,7 @@ prepare-env-files:
 		echo "${YELLOW}Environment file for frontend already exists, skipping${RESET}"; \
 	fi
 
-setup: prepare-env-files build-up migrate-up-latest
+setup: prepare-env-files build-up migrate-up-latest storage-setup
 	@echo "${GREEN}Setup complete!${RESET}"
 
 # =================================================
@@ -164,3 +167,10 @@ backend-lint:
 backend-format:
 	@echo "${CYAN}Formatting backend code with ruff...${RESET}"
 	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff format ."
+
+# =================================================
+# STORAGE COMMANDS
+# =================================================
+storage-setup:
+	@echo "${CYAN}Setting up MinIO bucket and permissions...${RESET}"
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_minio_setup

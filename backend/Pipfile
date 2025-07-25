@@ -11,6 +11,8 @@ sqlalchemy = {extras = ["asyncio"], version = "~=2.0"}
 fastapi-users = {extras = ["sqlalchemy"], version = "~=14.0"}
 alembic = "~=1.16"
 asyncpg = "~=0.30"
+boto3 = "~=1.35"
+botocore = "~=1.35"
 
 [dev-packages]
 pytest = "~=8.4.0"
@@ -19,6 +21,7 @@ aiosqlite = "~=0.20.0"
 httpx = "~=0.28.0"
 granian = {extras = ["reload"], version = "~=2.3"}
 ruff = "~=0.12.3"
+moto = {extras = ["s3"], version = "~=5.0"}
 
 [requires]
 python_version = "3.12"
