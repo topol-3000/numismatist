@@ -1,6 +1,6 @@
 """Tests for storage services."""
 
-import tempfile
+from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
@@ -33,7 +33,7 @@ class TestStorageFactory:
     def test_get_storage_service_s3(self, mock_settings):
         """Test factory returns S3StorageService for S3 backend."""
         mock_settings.storage.backend = StorageBackend.S3
-        mock_settings.storage.endpoint_url = "http://localhost:9000"
+        mock_settings.storage.endpoint_url = "http://localhost:9099"
         mock_settings.storage.access_key = "test"
         mock_settings.storage.secret_key = "test"
         mock_settings.storage.bucket_name = "test"
@@ -76,12 +76,12 @@ class TestS3StorageService:
     def s3_service(self, mock_s3_client):
         """Create S3 storage service with mocked client."""
         with patch('services.storage.settings') as mock_settings:
-            mock_settings.storage.endpoint_url = "http://localhost:9000"
+            mock_settings.storage.endpoint_url = "http://localhost:9099"
             mock_settings.storage.access_key = "test"
             mock_settings.storage.secret_key = "test"
             mock_settings.storage.bucket_name = "test-bucket"
             mock_settings.storage.region = "us-east-1"
-            mock_settings.storage.public_url = "http://localhost:9000/test-bucket"
+            mock_settings.storage.public_url = "http://localhost:9099/test-bucket"
             
             return S3StorageService()
     
@@ -148,16 +148,16 @@ class TestS3StorageService:
     def test_get_file_url_with_public_url(self, mock_s3_client):
         """Test URL generation with public URL."""
         with patch('services.storage.settings') as mock_settings:
-            mock_settings.storage.endpoint_url = "http://localhost:9000"
+            mock_settings.storage.endpoint_url = "http://localhost:9099"
             mock_settings.storage.access_key = "test"
             mock_settings.storage.secret_key = "test"
             mock_settings.storage.bucket_name = "test-bucket"
             mock_settings.storage.region = "us-east-1"
-            mock_settings.storage.public_url = "http://localhost:9000/test-bucket"
+            mock_settings.storage.public_url = "http://localhost:9099/test-bucket"
             
             service = S3StorageService()
             url = service.get_file_url("items/test.jpg")
-            assert url == "http://localhost:9000/test-bucket/items/test.jpg"
+            assert url == "http://localhost:9099/test-bucket/items/test.jpg"
     
     def test_get_file_url_with_presigned_url(self, s3_service, mock_s3_client):
         """Test URL generation with presigned URL."""
@@ -180,7 +180,7 @@ class TestLocalStorageService:
     @pytest.fixture
     def temp_dir(self):
         """Create temporary directory for testing."""
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with TemporaryDirectory() as temp_dir:
             yield Path(temp_dir)
     
     @pytest.fixture
@@ -240,7 +240,7 @@ class TestLocalStorageService:
         
         # Delete file
         await local_service.delete_file("items/test.jpg")
-        
+
         # Check file is deleted
         assert not test_file.exists()
     
@@ -249,12 +249,12 @@ class TestLocalStorageService:
         """Test deletion of non-existent file (should not raise)."""
         # Should not raise exception
         await local_service.delete_file("items/nonexistent.jpg")
-    
+
     def test_get_file_url_with_public_url(self, local_service):
         """Test URL generation with public URL."""
         url = local_service.get_file_url("items/test.jpg")
         assert url == "http://localhost:8099/static/items/test.jpg"
-    
+
     def test_get_file_url_without_public_url(self, temp_dir):
         """Test URL generation without public URL."""
         with patch('services.storage.settings') as mock_settings:

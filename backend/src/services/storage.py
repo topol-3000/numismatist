@@ -8,7 +8,7 @@ import boto3
 from botocore.exceptions import ClientError
 from fastapi import HTTPException, UploadFile, status
 
-from settings import settings, StorageBackend
+from settings import StorageBackend, settings
 
 
 class StorageService(ABC):
@@ -118,6 +118,7 @@ class LocalStorageService(StorageService):
     def __init__(self):
         self.base_path = Path(settings.storage.local_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
+        self.public_url = (settings.storage.public_url or "").rstrip("/")
 
     async def upload_file(
         self,
@@ -160,11 +161,7 @@ class LocalStorageService(StorageService):
 
     def get_file_url(self, file_path: str) -> str:
         """Get URL for local file (assumes static file serving)."""
-        # Use the public_url setting if available, otherwise fall back to relative path
-        if settings.storage.public_url:
-            return f"{settings.storage.public_url.rstrip('/')}/static/{file_path}"
-        else:
-            return f"/static/{file_path}"
+        return f"{self.public_url}/static/{file_path}"
 
 
 # Storage service factory

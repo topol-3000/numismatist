@@ -140,7 +140,7 @@ setup: prepare-env-files build-up migrate-up-latest storage-setup
 # =================================================
 test:
 	@echo "${CYAN}Running all tests...${RESET}"
-	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && python -m pytest tests/ -v"
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app/src && python -m pytest tests/ -v"
 
 # =================================================
 # FRONTEND COMMANDS
@@ -162,11 +162,11 @@ frontend-format:
 # =================================================
 backend-lint:
 	@echo "${CYAN}Linting backend code with ruff...${RESET}"
-	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff check ."
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff check src/"
 
 backend-format:
 	@echo "${CYAN}Formatting backend code with ruff...${RESET}"
-	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff format ."
+	@${DOCKER_COMPOSE_CMD} --profile tools run --rm numismatist_dev_tools sh -c "cd /app && ruff format src/"
 
 # =================================================
 # STORAGE COMMANDS
