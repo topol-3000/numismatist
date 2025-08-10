@@ -1,58 +1,106 @@
-"""Test configuration and fixtures."""
+import tempfile
+import os
 from datetime import date
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from api.main import app
 from api.dependency.database import get_session
-from api.routes.fastapi_users import current_active_user, current_active_superuser, fastapi_users
+from api.main import app
+from api.routes.fastapi_users import current_active_superuser, current_active_user, fastapi_users
 from models.base import Base
-from models.user import User
+from models.collection import Collection
+from models.grading_company import GradingCompany
+from models.grading_info import GradingInfo
 from models.item import Item
 from models.item_price_history import ItemPriceHistory
-from models.collection import Collection
-from utils.tokens import generate_share_token
+from models.user import User
 from utils.enums import PriceType
+from utils.tokens import generate_share_token
 
 
-# Test database URL (in-memory SQLite for fast tests)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Global variable to store shared test database path
+_test_db_path = None
 
 
-@pytest_asyncio.fixture(scope="function")
-async def test_db_engine():
-    """Create a test database engine."""
+def get_test_db_path():
+    """Get or create the path for the shared test database."""
+    global _test_db_path
+    if _test_db_path is None:
+        # Create a temporary file for the test database
+        fd, _test_db_path = tempfile.mkstemp(suffix='.db', prefix='test_numismatist_')
+        os.close(fd)  # Close the file descriptor, we just need the path
+    return _test_db_path
+
+
+@pytest_asyncio.fixture(scope="session")
+async def shared_db_engine():
+    """Create a shared database engine with pre-loaded grading data for the entire test session."""
+    db_path = get_test_db_path()
+    database_url = f"sqlite+aiosqlite:///{db_path}"
+    
     engine = create_async_engine(
-        TEST_DATABASE_URL,
+        database_url,
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
     )
     
+    # Create tables and load grading data once for all tests
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
+    # Load grading data once for all tests
+    async with AsyncSession(engine) as session:
+        from tests.utils.sql_data_loader import SQLDataLoader
+        loader = SQLDataLoader()
+        await loader.load_all_grading_data_with_orm(session)
+    
     yield engine
     
+    # Cleanup
     await engine.dispose()
+    try:
+        os.unlink(db_path)
+    except (OSError, FileNotFoundError):
+        pass
 
 
 @pytest_asyncio.fixture(scope="function")
+async def test_db_engine(shared_db_engine):
+    """Create a test database engine that reuses shared grading data."""
+    yield shared_db_engine
+
+
+@pytest_asyncio.fixture(scope="function") 
 async def test_session(test_db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a test database session."""
+    """Create a test database session with cleanup after each test."""
     async with AsyncSession(test_db_engine) as session:
         yield session
+        
+        # Clean up user-generated data after each test
+        # This preserves grading companies and grades data
+        await session.execute(text("DELETE FROM grading_info"))
+        await session.execute(text("DELETE FROM item_price_history"))
+        await session.execute(text("DELETE FROM item_images"))
+        await session.execute(text("DELETE FROM items"))
+        await session.execute(text("DELETE FROM collections"))
+        await session.execute(text("DELETE FROM access_tokens"))
+        await session.execute(text("DELETE FROM users"))
+        await session.commit()
 
 
 @pytest.fixture(scope="function")
-def client(test_session):
+def client(test_db_engine):
     """Create a test client with dependency override."""
     
-    def override_get_session():
-        return test_session
+    async def override_get_session():
+        async with AsyncSession(test_db_engine) as session:
+            yield session
     
     app.dependency_overrides[get_session] = override_get_session
     
@@ -149,13 +197,56 @@ async def test_superuser(test_session) -> User:
 
 
 @pytest_asyncio.fixture
-async def test_item(test_session, test_user) -> Item:
-    """Create a test item with price history."""
+async def test_item(test_session, test_user, test_grading_companies) -> Item:
+    """Create a test item with price history and grading info."""
     
     item = Item(
         name="Test Coin",
         year="2024",
         description="A test coin for testing purposes",
+        material="gold",
+        weight=10.5,
+        user_id=test_user.id,
+    )
+    test_session.add(item)
+    await test_session.flush()  # Get the item ID
+    
+    # Create a purchase price history entry
+    price_history = ItemPriceHistory(
+        item_id=item.id,
+        price=50000,  # $500 in pennies
+        type=PriceType.PURCHASE,
+        date=date.today()
+    )
+    test_session.add(price_history)
+    
+    ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+    if ngc_company:
+        grading_info = GradingInfo(
+            item_id=item.id,
+            company_id=ngc_company.id,
+            certificate_number='5712634-005',
+            grade='MS 65',
+            grade_details='CLEANED',
+            note='Test coin with original surfaces'
+        )
+        test_session.add(grading_info)
+    
+    await test_session.commit()
+    await test_session.refresh(item)
+    # Expunge from session to avoid greenlet issues in tests
+    test_session.expunge(item)
+    return item
+
+
+@pytest_asyncio.fixture
+async def test_item_no_grading_info(test_session, test_user) -> Item:
+    """Create a test item with price history but no grading info."""
+    
+    item = Item(
+        name="Test Coin No Grading",
+        year="2024", 
+        description="A test coin without grading info",
         material="gold",
         weight=10.5,
         user_id=test_user.id,
@@ -312,6 +403,50 @@ def another_user_client(test_session, another_user):
     app.dependency_overrides.clear()
 
 
+@pytest_asyncio.fixture
+async def test_grading_companies(test_session) -> list[GradingCompany]:
+    """Get grading companies loaded from SQL files."""
+    from sqlalchemy import select
+    
+    # Simply query companies from the test database (they should already be loaded)
+    result = await test_session.execute(select(GradingCompany))
+    companies = result.scalars().all()
+    
+    # Expunge to avoid session issues
+    for company in companies:
+        test_session.expunge(company)
+    
+    return companies
+
+
+@pytest_asyncio.fixture
+async def test_grades(test_session, test_grading_companies) -> list[dict[str, Any]]:
+    """Get grades loaded from SQL files."""
+    from sqlalchemy import select
+    from models.grade import Grade
+    from models.grading_company import GradingCompany
+    
+    # Query grades with company info
+    result = await test_session.execute(
+        select(Grade, GradingCompany)
+        .join(GradingCompany, Grade.company_id == GradingCompany.id)
+    )
+    
+    grades_data = []
+    for grade, company in result.all():
+        grades_data.append({
+            'id': str(grade.id),
+            'company_id': str(grade.company_id),
+            'company_short_name': company.short_name,
+            'category': grade.category,
+            'value': grade.value,
+            'sort_order': grade.sort_order
+        })
+    
+    return grades_data
+
+
+@pytest.fixture(scope="function")
 def get_auth_headers(user_id: int) -> dict:
     """Get authentication headers for testing."""
     # For testing, we'll mock the authentication

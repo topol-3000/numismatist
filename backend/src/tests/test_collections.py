@@ -475,7 +475,7 @@ class TestCollectionsEndpoints:
 class TestCollectionsWorkflows:
     """Test comprehensive collection management workflows and user journeys."""
 
-    def test_full_collection_workflow(self, authenticated_client):
+    def test_full_collection_workflow(self, authenticated_client, test_grading_companies):
         """
         Test complete workflow: create collection, add items, share, access shared link.
         """
@@ -491,19 +491,26 @@ class TestCollectionsWorkflows:
         collection_id = collection["id"]
         
         # 2. Create items
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data_1 = {
             "name": "Workflow Item 1",
             "year": "2023",
             "material": "gold",
             "weight": 10.0,
-            "purchase_price": 8000
+            "purchase_price": 8000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-010"
         }
         item_data_2 = {
             "name": "Workflow Item 2", 
             "year": "2024",
             "material": "silver",
             "weight": 15.0,
-            "purchase_price": 4500
+            "purchase_price": 4500,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-011"
         }
         
         item1_response = authenticated_client.post("/api/items/", json=item_data_1)
@@ -595,7 +602,7 @@ class TestCollectionsWorkflows:
             shared_data = shared_response.json()
             assert shared_data["name"] == collection_data["name"]
 
-    def test_collection_lifecycle(self, authenticated_client, test_user):
+    def test_collection_lifecycle(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create collection -> add items -> update collection -> share -> revoke share -> delete collection
         Expected: Complete lifecycle operations succeed and maintain data consistency
@@ -614,12 +621,17 @@ class TestCollectionsWorkflows:
         assert collection["share_token"] is None
         
         # Step 2: Create and add items
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data = {
             "name": "Lifecycle Coin",
             "year": "2024",
             "material": "gold",
             "weight": 10.0,
-            "purchase_price": 12000
+            "purchase_price": 12000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-012"
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)
@@ -679,7 +691,7 @@ class TestCollectionsWorkflows:
         get_response = authenticated_client.get(f"/api/collections/{collection_id}")
         assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_item_one_to_many_constraint(self, authenticated_client, test_user):
+    def test_item_one_to_many_constraint(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create item -> add to collection1 -> try to add to collection2
         Expected: Second attempt fails with 400 Bad Request
@@ -698,12 +710,18 @@ class TestCollectionsWorkflows:
         collection2 = collection2_response.json()
         
         # Create an item
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data = {
             "name": "Constraint Test Coin",
             "year": "2024",
             "material": "gold",
             "weight": 10.0,
-            "purchase_price": 15000
+            "purchase_price": 15000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-013"
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)
@@ -733,7 +751,7 @@ class TestCollectionsWorkflows:
         assert len(collection2_get.json()["items"]) == 0
         assert collection1_get.json()["items"][0]["id"] == item["id"]
 
-    def test_item_move_between_collections(self, authenticated_client, test_user):
+    def test_item_move_between_collections(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create item -> add to collection1 -> remove from collection1 -> add to collection2
         Expected: Item can be moved between collections by removing first
@@ -749,12 +767,18 @@ class TestCollectionsWorkflows:
         collection2 = collection2_response.json()
         
         # Create an item
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data = {
             "name": "Move Test Coin",
             "year": "2024",
             "material": "silver",
             "weight": 15.0,
-            "purchase_price": 9000
+            "purchase_price": 9000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-014"
         }
         
         item_response = authenticated_client.post("/api/items/", json=item_data)

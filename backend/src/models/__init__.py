@@ -7,12 +7,18 @@ __all__ = (
     "Collection",
     "Dealer",
     "ItemPriceHistory",
+    "GradingInfo",
+    "GradingCompany",
+    "Grade",
 )
 
 from .access_token import AccessToken
 from .base import Base
 from .collection import Collection
 from .dealer import Dealer
+from .grade import Grade
+from .grading_company import GradingCompany
+from .grading_info import GradingInfo
 from .item import Item
 from .item_image import ItemImage
 from .item_price_history import ItemPriceHistory

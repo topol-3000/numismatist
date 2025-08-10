@@ -56,18 +56,22 @@ class TestItemsEndpoints:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Item not found" in response.json()["detail"]
 
-    def test_create_item_complete_data(self, authenticated_client, test_user):
+    def test_create_item_complete_data(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: POST /api/items/ with complete item data (name, year, description, material, weight)
         Expected: 201 Created with all fields preserved, user_id set, auto-generated ID
-        """        
+        """
+        company = test_grading_companies[0]
+        
         item_data = {
             "name": "Gold Eagle",
             "year": "2023",
             "description": "American Gold Eagle coin",
             "material": "gold",
             "weight": 33.93,
-            "purchase_price": 180000  # $1800 in pennies
+            "purchase_price": 180000,  # $1800 in pennies
+            "grading_company_id": company.id,
+            "certificate_number": "12345678"
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -81,16 +85,20 @@ class TestItemsEndpoints:
         assert data["user_id"] == test_user.id
         assert "id" in data
 
-    def test_create_item_minimal_data(self, authenticated_client, test_user):
+    def test_create_item_minimal_data(self, authenticated_client, test_user, test_grading_companies):
         """
-        Flow: POST /api/items/ with only required fields (name, year, material)
+        Flow: POST /api/items/ with only required fields (name, year, material, grading)
         Expected: 201 Created with optional fields (description, weight) as null
         """
+        company = test_grading_companies[0]
+        
         item_data = {
             "name": "Simple Coin",
             "year": "2024",
             "material": "silver",
-            "purchase_price": 5000  # $50 in pennies
+            "purchase_price": 5000,  # $50 in pennies
+            "grading_company_id": company.id,
+            "certificate_number": "87654321"
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -101,15 +109,20 @@ class TestItemsEndpoints:
         assert data["description"] is None
         assert data["weight"] is None
 
-    def test_create_item_invalid_material(self, authenticated_client, test_user):
+    def test_create_item_invalid_material(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: POST /api/items/ with invalid material enum value ("unobtainium")
         Expected: 422 Unprocessable Entity due to material validation
         """
+        company = test_grading_companies[0]
+        
         item_data = {
             "name": "Invalid Coin",
             "year": "2024",
-            "material": "unobtainium"  # Invalid material
+            "material": "unobtainium",  # Invalid material
+            "purchase_price": 1000,
+            "grading_company_id": company.id,
+            "certificate_number": "11111111"
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -118,12 +131,14 @@ class TestItemsEndpoints:
 
     def test_create_item_missing_fields(self, authenticated_client, test_user):
         """
-        Flow: POST /api/items/ with missing required fields (only name provided)
-        Expected: 422 Unprocessable Entity due to missing year and material
+        Flow: POST /api/items/ with missing required fields (missing grading info)
+        Expected: 422 Unprocessable Entity due to missing grading_company_id and certificate_number
         """
         item_data = {
-            "name": "Incomplete Coin"
-            # Missing year and material
+            "name": "Incomplete Coin",
+            "year": "2024",
+            "material": "silver",
+            "purchase_price": 1000
         }
 
         response = authenticated_client.post("/api/items/", json=item_data)
@@ -235,11 +250,13 @@ class TestItemsEndpoints:
 class TestItemsWorkflows:
     """Test comprehensive item management workflows and user journeys."""
 
-    def test_item_lifecycle(self, authenticated_client, test_user):
+    def test_item_lifecycle(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create item -> read item -> update item -> delete item -> verify deletion
         Expected: All CRUD operations succeed (201 -> 200 -> 200 -> 204 -> 404)
         """
+        company = test_grading_companies[0]
+        
         # Step 1: Create item
         create_data = {
             "name": "Lifecycle Coin",
@@ -247,7 +264,9 @@ class TestItemsWorkflows:
             "description": "Testing lifecycle",
             "material": "silver",
             "weight": 12.0,
-            "purchase_price": 7500  # $75 in pennies
+            "purchase_price": 7500,  # $75 in pennies
+            "grading_company_id": company.id,
+            "certificate_number": "12345567"
         }
 
         create_response = authenticated_client.post("/api/items/", json=create_data)
@@ -281,17 +300,21 @@ class TestItemsWorkflows:
         final_read = authenticated_client.get(f"/api/items/{item_id}")
         assert final_read.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_user_isolation(self, authenticated_client, test_user, test_session):
+    def test_user_isolation(self, authenticated_client, test_user, test_session, test_grading_companies):
         """
         Flow: Create item -> verify it appears in user's list and can be accessed individually
         Expected: User can only see their own items, proper ownership isolation
         """
+        company = test_grading_companies[0]
+        
         # Create item as authenticated user
         create_data = {
             "name": "User 1 Coin",
             "year": "2024",
             "material": "gold",
-            "purchase_price": 10000  # $100 in pennies
+            "purchase_price": 10000,  # $100 in pennies
+            "grading_company_id": company.id,
+            "certificate_number": "12345001"
         }
 
         create_response = authenticated_client.post("/api/items/", json=create_data)
@@ -310,16 +333,18 @@ class TestItemsWorkflows:
         get_response = authenticated_client.get(f"/api/items/{item_id}")
         assert get_response.status_code == status.HTTP_200_OK
 
-    def test_bulk_operations(self, authenticated_client, test_user):
+    def test_bulk_operations(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create 3 items -> verify list shows all 3 ordered by name -> delete all -> verify empty list
         Expected: Bulk operations work correctly, collection state properly managed
         """
+        company = test_grading_companies[0]
+        
         # Create multiple items
         items_data = [
-            {"name": "Coin 1", "year": "2020", "material": "gold", "purchase_price": 8000},
-            {"name": "Coin 2", "year": "2021", "material": "silver", "purchase_price": 3000},
-            {"name": "Coin 3", "year": "2022", "material": "copper", "purchase_price": 500},
+            {"name": "Coin 1", "year": "2020", "material": "gold", "purchase_price": 8000, "grading_company_id": company.id, "certificate_number": "12345001"},
+            {"name": "Coin 2", "year": "2021", "material": "silver", "purchase_price": 3000, "grading_company_id": company.id, "certificate_number": "12345002"},
+            {"name": "Coin 3", "year": "2022", "material": "copper", "purchase_price": 500, "grading_company_id": company.id, "certificate_number": "12345003"},
         ]
 
         created_items = []
@@ -347,3 +372,92 @@ class TestItemsWorkflows:
         final_list = authenticated_client.get("/api/items/")
         assert final_list.status_code == status.HTTP_200_OK
         assert final_list.json() == []
+
+    def test_create_item_with_grading_info(self, authenticated_client, test_user, test_grading_companies):
+        """Test creating an item with complete grading info (all fields including optional ones)."""
+        # Find PCGS company
+        pcgs_company = next((c for c in test_grading_companies if c.short_name == "PCGS"), None)
+        assert pcgs_company is not None
+        
+        item_data = {
+            "name": "Test Graded Coin",
+            "year": "2024",
+            "material": "gold",
+            "purchase_price": 50000,  # $500 in pennies
+            # Complete grading info with all optional fields
+            "grading_company_id": pcgs_company.id,
+            "certificate_number": "21690270",
+            "grade": "MS 67",
+            "grade_details": "CLEANED",
+            "grading_note": "Test note",
+            "certificate_url": "https://www.pcgs.com/cert/21690270"
+        }
+        
+        # Create item
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        
+        created_item = response.json()
+        assert created_item["name"] == "Test Graded Coin"
+        
+        # Get item detail to check grading info was created
+        detail_response = authenticated_client.get(f"/api/items/{created_item['id']}")
+        assert detail_response.status_code == status.HTTP_200_OK
+        
+        item_detail = detail_response.json()
+        assert "grading_info" in item_detail
+        assert item_detail["grading_info"] is not None
+        
+        grading_info = item_detail["grading_info"]
+        assert grading_info["certificate_number"] == "21690270"
+        assert grading_info["grade"] == "MS 67"
+        assert grading_info["grade_details"] == "CLEANED"
+        assert grading_info["note"] == "Test note"
+        assert grading_info["company"]["short_name"] == "PCGS"
+        assert grading_info["certificate_url"] == "https://www.pcgs.com/cert/21690270"
+
+    def test_create_item_grading_validation(self, authenticated_client, test_user, test_grading_companies):
+        """Test validation when creating item with invalid grading company."""
+        # Test: invalid grading company ID
+        item_data = {
+            "name": "Invalid Grading",
+            "year": "2024",
+            "material": "gold",
+            "purchase_price": 50000,
+            "grading_company_id": "550e8400-e29b-41d4-a716-000000000000",  # Non-existent ID
+            "certificate_number": "12345678"
+        }
+        
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Grading company not found" in response.json()["detail"]
+
+    def test_create_item_invalid_grading_company(self, authenticated_client, test_user):
+        """Test creating item with completely invalid grading company ID format."""
+        item_data = {
+            "name": "Invalid Company",
+            "year": "2024", 
+            "material": "silver",
+            "purchase_price": 1000,
+            "grading_company_id": "invalid-uuid-format",
+            "certificate_number": "12345678"
+        }
+        
+        response = authenticated_client.post("/api/items/", json=item_data)
+        # Should fail with validation error due to invalid UUID format
+        assert response.status_code >= 400
+
+    def test_create_item_invalid_grading_company(self, authenticated_client, test_user):
+        """Test creating item with invalid grading company ID."""
+        item_data = {
+            "name": "Invalid Company",
+            "year": "2024",
+            "material": "gold",
+            "purchase_price": 50000,
+            "grading_company_id": "550e8400-e29b-41d4-a716-000000000000",  # Non-existent
+            "certificate_number": "12345",
+        }
+        
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Grading company not found" in response.json()["detail"]

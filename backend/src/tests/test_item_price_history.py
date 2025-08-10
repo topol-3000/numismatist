@@ -224,18 +224,23 @@ class TestItemPriceHistory:
         dates: list[str] = [entry["date"] for entry in price_history]
         assert dates == sorted(dates, reverse=True)
 
-    def test_price_history_workflow(self, authenticated_client: TestClient, test_user: User):
+    def test_price_history_workflow(self, authenticated_client: TestClient, test_user: User, test_grading_companies):
         """
         Flow: Complete price history workflow
         Expected: Create item -> add multiple prices -> update -> delete -> verify
         """
         # Step 1: Create item (creates purchase price entry)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data: dict[str, Any] = {
             "name": "Price History Coin",
             "year": "2024",
             "material": "gold",
             "purchase_price": 50000,  # $500 purchase price
-            "purchase_date": "2024-01-01"
+            "purchase_date": "2024-01-01",
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-015"
         }
         
         create_response: Response = authenticated_client.post("/api/items/", json=item_data)
