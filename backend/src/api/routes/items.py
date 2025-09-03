@@ -6,13 +6,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.engine import Result
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.dependency.database import SessionDependency
 from api.dependency.item import verify_item_ownership
 from api.routes.fastapi_users import current_active_user
-from models import Item, ItemImage, ItemPriceHistory, User
+from models import GradingCompany, GradingInfo, Item, ItemImage, ItemPriceHistory, User
+from schemas.grading_info import (
+    GradingInfoCreate,
+    GradingInfoRead,
+    GradingInfoUpdate,
+)
 from schemas.item import (
     ItemCreate,
     ItemRead,
@@ -33,6 +39,7 @@ from utils.enums import ImageType, PriceType
 
 router = APIRouter(prefix="/items", tags=["Items"])
 price_history_router = APIRouter(prefix="/{item_id}/price-history", tags=["Price History"])
+grading_info_router = APIRouter(prefix="/{item_id}/grading-info", tags=["Grading Info"])
 
 
 @router.get("/", response_model=list[ItemReadWithPurchasePrice])
@@ -84,7 +91,12 @@ async def get_item(
 ) -> Item:
     result: Result[Any] = await session.execute(
         select(Item)
-        .options(selectinload(Item.price_history))
+        .options(
+            selectinload(Item.price_history),
+            selectinload(Item.grading_info)
+            .selectinload(GradingInfo.company)
+            .load_only(GradingCompany.id, GradingCompany.short_name),
+        )
         .where(Item.id == str(item_id), Item.user_id == current_user.id)
     )
     item: Item | None = result.scalar_one_or_none()
@@ -105,6 +117,13 @@ async def create_item(
     purchase_price: int = item_dict.pop("purchase_price")
     purchase_date: date | None = item_dict.pop("purchase_date", None)
 
+    grading_company_id: str = item_dict.pop("grading_company_id")
+    certificate_number: str = item_dict.pop("certificate_number")
+    certificate_url: str | None = item_dict.pop("certificate_url", None)
+    grade: str | None = item_dict.pop("grade", None)
+    grade_details: str | None = item_dict.pop("grade_details", None)
+    grading_note: str | None = item_dict.pop("grading_note", None)
+
     item: Item = Item(**item_dict, user_id=current_user.id)
     session.add(item)
     await session.flush()
@@ -116,6 +135,25 @@ async def create_item(
         date=purchase_date,
     )
     session.add(price_history)
+
+    company_result = await session.execute(select(GradingCompany).where(GradingCompany.id == grading_company_id))
+    company = company_result.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grading company not found")
+
+    grading_info = GradingInfo(
+        item_id=item.id,
+        company_id=grading_company_id,
+        certificate_number=certificate_number,
+        certificate_url=certificate_url,
+        grade=grade,
+        grade_details=grade_details,
+        note=grading_note,
+    )
+
+    grading_info.company = company
+
+    session.add(grading_info)
 
     await session.commit()
     await session.refresh(item)
@@ -276,6 +314,127 @@ async def delete_item_price_history(
 
 
 # =================================================
+# GRADING INFO ENDPOINTS
+# =================================================
+
+
+async def get_grading_info_entry(item_id: str, session: AsyncSession) -> GradingInfo:
+    """
+    Get the grading info entry for an item.
+
+    Args:
+        item_id: The UUID of the item
+        session: Database session
+
+    Returns:
+        The GradingInfo object
+
+    Raises:
+        HTTPException: If grading info entry not found
+    """
+    grading_result: Result[Any] = await session.execute(select(GradingInfo).where(GradingInfo.item_id == item_id))
+    grading_info: GradingInfo | None = grading_result.scalar_one_or_none()
+
+    if not grading_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grading info not found for this item",
+        )
+
+    return grading_info
+
+
+@grading_info_router.get("/", response_model=GradingInfoRead | None)
+async def get_item_grading_info(
+    session: SessionDependency,
+    item: Item = Depends(verify_item_ownership),
+) -> GradingInfo | None:
+    """Get grading info for an item."""
+    result: Result[Any] = await session.execute(
+        select(GradingInfo)
+        .options(selectinload(GradingInfo.company).load_only(GradingCompany.id, GradingCompany.short_name))
+        .where(GradingInfo.item_id == item.id)
+    )
+    return result.scalar_one_or_none()
+
+
+@grading_info_router.post("/", response_model=GradingInfoRead, status_code=status.HTTP_201_CREATED)
+async def add_item_grading_info(
+    grading_data: GradingInfoCreate,
+    session: SessionDependency,
+    item: Item = Depends(verify_item_ownership),
+) -> GradingInfo:
+    """Add grading info to an item."""
+    grading_info: GradingInfo = GradingInfo(
+        item_id=item.id,
+        **grading_data.model_dump(exclude_unset=True),
+    )
+
+    session.add(grading_info)
+
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        error_msg = str(e)
+
+        if "item_id" in error_msg and ("UNIQUE" in error_msg or "unique" in error_msg):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Item already has grading info. Use PATCH to update or DELETE first.",
+            ) from None
+        else:
+            raise
+
+    await session.refresh(grading_info, ["company"])
+    await session.commit()
+    await session.refresh(grading_info, ["company"])
+
+    return grading_info
+
+
+@grading_info_router.patch("/", response_model=GradingInfoRead)
+async def update_item_grading_info(
+    grading_data: GradingInfoUpdate,
+    session: SessionDependency,
+    item: Item = Depends(verify_item_ownership),
+) -> GradingInfo:
+    """Update grading info for an item."""
+    grading_info: GradingInfo = await get_grading_info_entry(item.id, session)
+
+    update_data = grading_data.model_dump(exclude_unset=True)
+    if "company_id" in update_data and update_data["company_id"]:
+        company_result = await session.execute(
+            select(GradingCompany).where(GradingCompany.id == update_data["company_id"])
+        )
+        company = company_result.scalar_one_or_none()
+        if not company:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grading company not found")
+
+    for field, value in update_data.items():
+        setattr(grading_info, field, value)
+
+    await session.commit()
+    await session.refresh(grading_info)
+
+    # Load the company relationship for the response
+    await session.refresh(grading_info, ["company"])
+    return grading_info
+
+
+@grading_info_router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_item_grading_info(
+    session: SessionDependency,
+    item: Item = Depends(verify_item_ownership),
+) -> None:
+    """Delete grading info for an item."""
+    grading_info: GradingInfo = await get_grading_info_entry(item.id, session)
+
+    await session.delete(grading_info)
+    await session.commit()
+
+
+# =================================================
 # ITEM IMAGES ENDPOINTS
 # =================================================
 
@@ -397,4 +556,5 @@ async def delete_item_image(
 
 
 router.include_router(price_history_router)
+router.include_router(grading_info_router)
 router.include_router(images_router)

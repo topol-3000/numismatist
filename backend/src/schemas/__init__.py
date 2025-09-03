@@ -9,6 +9,18 @@ from .collection import (
     CollectionWithItems,
     SharedCollectionRead,
 )
+from .grading_company import (
+    GradingCompanyBase,
+    GradingCompanyCreate,
+    GradingCompanyRead,
+    GradingCompanyUpdate,
+)
+from .grading_info import (
+    GradingInfoBase,
+    GradingInfoCreate,
+    GradingInfoRead,
+    GradingInfoUpdate,
+)
 from .item import (
     ItemBase,
     ItemCreate,
@@ -44,6 +56,16 @@ __all__ = [
     "ItemPriceHistoryCreate",
     "ItemPriceHistoryRead",
     "ItemPriceHistoryUpdate",
+    # Grading company schemas
+    "GradingCompanyBase",
+    "GradingCompanyCreate",
+    "GradingCompanyRead",
+    "GradingCompanyUpdate",
+    # Grading info schemas
+    "GradingInfoBase",
+    "GradingInfoCreate",
+    "GradingInfoRead",
+    "GradingInfoUpdate",
     # Collection schemas
     "CollectionBase",
     "CollectionCreate",

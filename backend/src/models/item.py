@@ -11,6 +11,7 @@ from .mixins.uuid_pk import UuidPkMixin
 
 if TYPE_CHECKING:
     from .collection import Collection
+    from .grading_info import GradingInfo
     from .item_image import ItemImage
     from .item_price_history import ItemPriceHistory
     from .user import User
@@ -43,4 +44,10 @@ class Item(Base, UuidPkMixin):
         back_populates="item",
         cascade="all, delete-orphan",
         order_by="ItemPriceHistory.date.desc()",
+    )
+    grading_info: Mapped["GradingInfo | None"] = relationship(
+        "GradingInfo",
+        back_populates="item",
+        cascade="all, delete-orphan",
+        uselist=False,
     )

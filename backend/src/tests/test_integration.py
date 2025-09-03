@@ -6,7 +6,7 @@ from fastapi import status
 class TestGeneralWorkflow:
     """Integration tests for numismatic application workflows including user journeys, collection management, and system reliability."""
     
-    def test_user_collection_lifecycle(self, authenticated_client, test_session):
+    def test_user_collection_lifecycle(self, authenticated_client, test_session, test_grading_companies):
         """
         Flow: Register user -> create items -> update item -> delete item -> verify final state
         Expected: All operations succeed with proper status codes and data consistency maintained
@@ -17,13 +17,21 @@ class TestGeneralWorkflow:
         })
         assert response.status_code == status.HTTP_201_CREATED
          # Create two items
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item1_response = authenticated_client.post("/api/items/", json={
             "name": "First Coin", "year": "2024", "description": "My first coin",
-            "material": "gold", "weight": 10.0, "purchase_price": 15000
+            "material": "gold", "weight": 10.0, "purchase_price": 15000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-001"
         })
         item2_response = authenticated_client.post("/api/items/", json={
             "name": "Silver Dollar", "year": "1921", "material": "silver", 
-            "weight": 26.73, "purchase_price": 5000
+            "weight": 26.73, "purchase_price": 5000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-002"
         })
         assert item1_response.status_code == status.HTTP_201_CREATED
         assert item2_response.status_code == status.HTTP_201_CREATED
@@ -53,16 +61,20 @@ class TestGeneralWorkflow:
         assert final_items[0]["id"] == item1["id"]
         assert final_items[0]["description"] == "Updated description"
     
-    def test_bulk_operations(self, authenticated_client, test_user):
+    def test_bulk_operations(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create multiple items -> verify collection -> update all items -> verify all updates applied
         Expected: 201 for each creation, 200 for updates, consistent data across all operations
         """
         # Create 3 items
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         items_data = [
-            {"name": "Coin A", "year": "2024", "material": "gold", "purchase_price": 12000},
-            {"name": "Coin B", "year": "2023", "material": "silver", "purchase_price": 4000},
-            {"name": "Coin C", "year": "2022", "material": "platinum", "purchase_price": 25000}
+            {"name": "Coin A", "year": "2024", "material": "gold", "purchase_price": 12000, "grading_company_id": ngc_company.id, "certificate_number": "1234567-003"},
+            {"name": "Coin B", "year": "2023", "material": "silver", "purchase_price": 4000, "grading_company_id": ngc_company.id, "certificate_number": "1234567-004"},
+            {"name": "Coin C", "year": "2022", "material": "platinum", "purchase_price": 25000, "grading_company_id": ngc_company.id, "certificate_number": "1234567-005"}
         ]
         
         created_items = []
@@ -89,18 +101,22 @@ class TestGeneralWorkflow:
         for i in range(3):
             assert f"Updated description {i}" in descriptions
     
-    def test_error_handling(self, authenticated_client, test_user):
+    def test_error_handling(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Attempt invalid operations -> verify proper error codes -> confirm system recovery with valid operation
         Expected: Appropriate 4xx status codes for errors, 201 for recovery operation
         """
         # Invalid item data
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         invalid_responses = [
-            authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold", "purchase_price": 5000}),
+            authenticated_client.post("/api/items/", json={"name": "", "year": "2024", "material": "gold", "purchase_price": 5000, "grading_company_id": ngc_company.id, "certificate_number": "1234567-006"}),
             authenticated_client.get("/api/items/12345678-1234-1234-1234-123456789012"),  # Valid UUID format
             authenticated_client.patch("/api/items/12345678-1234-1234-1234-123456789012", json={"name": "Updated"}),
             authenticated_client.delete("/api/items/12345678-1234-1234-1234-123456789012"),
-            authenticated_client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "invalid", "purchase_price": 5000})
+            authenticated_client.post("/api/items/", json={"name": "Test", "year": "2024", "material": "invalid", "purchase_price": 5000, "grading_company_id": ngc_company.id, "certificate_number": "1234567-007"})
         ]
         
         expected_codes = [
@@ -115,20 +131,33 @@ class TestGeneralWorkflow:
             assert response.status_code == expected_code
         
         # Verify system recovery with valid operation
+        # Get NGC company for grading (using fixture data)  
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         valid_response = authenticated_client.post("/api/items/", json={
-            "name": "Valid Coin", "year": "2024", "material": "silver", "purchase_price": 6000
+            "name": "Valid Coin", "year": "2024", "material": "silver", "purchase_price": 6000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-008"
         })
         assert valid_response.status_code == status.HTTP_201_CREATED
     
-    def test_data_consistency(self, authenticated_client, test_user):
+    def test_data_consistency(self, authenticated_client, test_user, test_grading_companies):
         """
         Flow: Create item -> verify in list and individual views -> update -> verify changes -> delete -> verify removal
         Expected: Data consistency maintained across all views and operations, proper 404 after deletion
         """        # Create item
+        # Create item
+        # Get NGC company for grading (using fixture data)
+        ngc_company = next((c for c in test_grading_companies if c.short_name == "NGC"), None)
+        assert ngc_company is not None, "NGC company not found in test fixtures"
+        
         item_data = {
             "name": "Consistency Test Coin", "year": "2024",
             "description": "Testing data consistency", "material": "gold", 
-            "weight": 15.0, "purchase_price": 18000
+            "weight": 15.0, "purchase_price": 18000,
+            "grading_company_id": ngc_company.id,
+            "certificate_number": "1234567-009"
         }
 
         created_response = authenticated_client.post("/api/items/", json=item_data)
