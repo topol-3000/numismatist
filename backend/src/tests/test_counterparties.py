@@ -8,6 +8,7 @@ class TestCounterpartiesEndpoints:
     async def test_create_counterparty(self, authenticated_client, test_user, test_session):
         data = {
             "name": "CounterpartyTest",
+            "role": "seller",
             "email": "counterparty@test.com",
             "phone": "555-1234",
             "address": "123 Test St",
@@ -18,6 +19,7 @@ class TestCounterpartiesEndpoints:
         assert response.status_code == 201
         counterparty = response.json()
         assert counterparty["name"] == data["name"]
+        assert counterparty["role"] == data["role"]
         assert counterparty["email"] == data["email"]
         assert counterparty["phone"] == data["phone"]
         assert counterparty["address"] == data["address"]

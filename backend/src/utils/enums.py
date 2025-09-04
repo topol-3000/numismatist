@@ -23,6 +23,14 @@ class PriceType(StrEnum):
     CURRENT = "current"
 
 
+class CounterpartyRole(StrEnum):
+    """Role of counterparty in transactions."""
+
+    SELLER = "seller"
+    BUYER = "buyer"
+    BOTH = "dealer"
+
+
 class ImageType(StrEnum):
     """Image type for item images."""
 

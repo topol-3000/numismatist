@@ -53,6 +53,7 @@ def upgrade() -> None:
     )
     op.create_table('counterparties',
     sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.Enum('SELLER', 'BUYER', 'BOTH', name='counterpartyrole'), nullable=False, server_default='BOTH'),
     sa.Column('email', sa.String(length=255), nullable=True),
     sa.Column('phone', sa.String(length=50), nullable=True),
     sa.Column('address', sa.String(length=255), nullable=True),
@@ -120,6 +121,7 @@ def downgrade() -> None:
     op.drop_table('users')
     
     # Drop custom enum types
+    op.execute('DROP TYPE IF EXISTS counterpartyrole')
     op.execute('DROP TYPE IF EXISTS pricetype')
     op.execute('DROP TYPE IF EXISTS imagetype')
     op.execute('DROP TYPE IF EXISTS material')
