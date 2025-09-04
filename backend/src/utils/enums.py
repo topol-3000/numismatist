@@ -21,6 +21,9 @@ class PriceType(StrEnum):
 
     PURCHASE = "purchase"
     CURRENT = "current"
+    SALE = "sale"
+    COLLECTION_PURCHASE = "collection_purchase"
+    COLLECTION_SALE = "collection_sale"
 
 
 class CounterpartyRole(StrEnum):
