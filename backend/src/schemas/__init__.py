@@ -47,6 +47,12 @@ from .transaction import (
     TransactionRead,
     TransactionUpdate,
 )
+from .transaction_item import (
+    TransactionItemBase,
+    TransactionItemCreate,
+    TransactionItemRead,
+    TransactionItemUpdate,
+)
 from .user import UserCreate, UserRead, UserRegisteredNotification, UserUpdate
 
 # Define what should be exported when using 'from schemas import *'
@@ -97,4 +103,9 @@ __all__ = [
     "TransactionCreate",
     "TransactionUpdate",
     "TransactionRead",
+    # Transaction item schemas
+    "TransactionItemBase",
+    "TransactionItemCreate",
+    "TransactionItemUpdate",
+    "TransactionItemRead",
 ]

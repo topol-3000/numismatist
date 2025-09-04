@@ -11,6 +11,7 @@ __all__ = (
     "GradingCompany",
     "Grade",
     "Transaction",
+    "TransactionItem",
 )
 
 from .access_token import AccessToken
@@ -24,4 +25,5 @@ from .item import Item
 from .item_image import ItemImage
 from .item_price_history import ItemPriceHistory
 from .transaction import Transaction
+from .transaction_item import TransactionItem
 from .user import User

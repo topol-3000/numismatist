@@ -13,6 +13,7 @@ from .mixins.uuid_pk import UuidPkMixin
 if TYPE_CHECKING:
     from .collection import Collection
     from .counterparty import Counterparty
+    from .transaction_item import TransactionItem
     from .user import User
 
 
@@ -55,3 +56,6 @@ class Transaction(Base, UuidPkMixin):
     user: Mapped["User"] = relationship("User", lazy="select")
     counterparty: Mapped["Counterparty"] = relationship("Counterparty", lazy="select")
     collection: Mapped["Collection | None"] = relationship("Collection", lazy="select")
+    transaction_items: Mapped[list["TransactionItem"]] = relationship(
+        "TransactionItem", back_populates="transaction", cascade="all, delete-orphan"
+    )
