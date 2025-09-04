@@ -34,6 +34,22 @@ class CounterpartyRole(StrEnum):
     BOTH = "dealer"
 
 
+class Currency(StrEnum):
+    """Currency types for transactions."""
+
+    USD = "usd"
+    EUR = "eur"
+
+
+class TransactionStatus(StrEnum):
+    """Status of transaction."""
+
+    PENDING = "pending"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+
 class ImageType(StrEnum):
     """Image type for item images."""
 
