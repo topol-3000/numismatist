@@ -10,6 +10,7 @@ from .mixins.id_int_pk import IdIntPkMixin
 
 if TYPE_CHECKING:
     from .item import Item
+    from .item_price_history import ItemPriceHistory
     from .transaction import Transaction
 
 
@@ -37,3 +38,6 @@ class TransactionItem(Base, IdIntPkMixin):
     # Relationships
     transaction: Mapped["Transaction"] = relationship("Transaction", lazy="select")
     item: Mapped["Item"] = relationship("Item", lazy="select")
+    price_history: Mapped[list["ItemPriceHistory"]] = relationship(
+        "ItemPriceHistory", back_populates="transaction_item"
+    )

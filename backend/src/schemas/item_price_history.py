@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import Field
 
 from schemas.base import SchemaConfigMixin
-from utils.enums import PriceType
+from utils.enums import Currency, PriceType
 
 
 class ItemPriceHistoryBase(SchemaConfigMixin):
@@ -13,6 +13,7 @@ class ItemPriceHistoryBase(SchemaConfigMixin):
     price: Annotated[int, Field(ge=0, description="Price in pennies/cents")]
     date: Annotated[dt_date, Field(description="When this price was recorded")]
     type: Annotated[PriceType, Field(description="Type of price entry")]
+    currency: Annotated[Currency, Field(description="Currency of the price")]
 
 
 class ItemPriceHistoryCreate(SchemaConfigMixin):
@@ -20,6 +21,8 @@ class ItemPriceHistoryCreate(SchemaConfigMixin):
 
     price: Annotated[int, Field(ge=0, description="Price in pennies/cents")]
     date: Annotated[dt_date | None, Field(description="When this price was recorded")] = None
+    currency: Annotated[Currency, Field(description="Currency of the price")] = Currency.USD
+    transaction_item_id: Annotated[int | None, Field(description="Related transaction item ID")] = None
 
 
 class ItemPriceHistoryRead(ItemPriceHistoryBase):
@@ -27,6 +30,7 @@ class ItemPriceHistoryRead(ItemPriceHistoryBase):
 
     id: int
     item_id: str
+    transaction_item_id: int | None
 
 
 class ItemPriceHistoryUpdate(SchemaConfigMixin):
@@ -34,3 +38,5 @@ class ItemPriceHistoryUpdate(SchemaConfigMixin):
 
     price: Annotated[int | None, Field(ge=0, description="Price in pennies/cents")] = None
     date: Annotated[dt_date | None, Field(description="When this price was recorded")] = None
+    currency: Annotated[Currency | None, Field(description="Currency of the price")] = None
+    transaction_item_id: Annotated[int | None, Field(description="Related transaction item ID")] = None
