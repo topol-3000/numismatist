@@ -5,7 +5,7 @@ __all__ = (
     "Item",
     "ItemImage",
     "Collection",
-    "Dealer",
+    "Counterparty",
     "ItemPriceHistory",
     "GradingInfo",
     "GradingCompany",
@@ -15,7 +15,7 @@ __all__ = (
 from .access_token import AccessToken
 from .base import Base
 from .collection import Collection
-from .dealer import Dealer
+from .counterparty import Counterparty
 from .grade import Grade
 from .grading_company import GradingCompany
 from .grading_info import GradingInfo

@@ -9,6 +9,12 @@ from .collection import (
     CollectionWithItems,
     SharedCollectionRead,
 )
+from .counterparty import (
+    CounterpartyBase,
+    CounterpartyCreate,
+    CounterpartyRead,
+    CounterpartyUpdate,
+)
 from .grading_company import (
     GradingCompanyBase,
     GradingCompanyCreate,
@@ -56,6 +62,11 @@ __all__ = [
     "ItemPriceHistoryCreate",
     "ItemPriceHistoryRead",
     "ItemPriceHistoryUpdate",
+    # Counterparty schemas
+    "CounterpartyBase",
+    "CounterpartyCreate",
+    "CounterpartyRead",
+    "CounterpartyUpdate",
     # Grading company schemas
     "GradingCompanyBase",
     "GradingCompanyCreate",

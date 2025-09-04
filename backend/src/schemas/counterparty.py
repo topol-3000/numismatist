@@ -3,8 +3,10 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-class DealerBase(BaseModel):
-    name: Annotated[str, Field(min_length=1, max_length=255, description="Dealer name")]
+class CounterpartyBase(BaseModel):
+    """Base schema for counterparty (person or organization involved in transactions)."""
+
+    name: Annotated[str, Field(min_length=1, max_length=255, description="Counterparty name")]
     email: Annotated[str | None, Field(description="Email address")] = None
     phone: Annotated[str | None, Field(description="Phone number")] = None
     address: Annotated[str | None, Field(description="Postal address")] = None
@@ -12,12 +14,16 @@ class DealerBase(BaseModel):
     note: Annotated[str | None, Field(description="Custom note")] = None
 
 
-class DealerCreate(DealerBase):
+class CounterpartyCreate(CounterpartyBase):
+    """Schema for creating a new counterparty."""
+
     pass
 
 
-class DealerUpdate(BaseModel):
-    name: Annotated[str | None, Field(min_length=1, max_length=255, description="Dealer name")] = None
+class CounterpartyUpdate(BaseModel):
+    """Schema for updating an existing counterparty."""
+
+    name: Annotated[str | None, Field(min_length=1, max_length=255, description="Counterparty name")] = None
     email: Annotated[str | None, Field(description="Email address")] = None
     phone: Annotated[str | None, Field(description="Phone number")] = None
     address: Annotated[str | None, Field(description="Postal address")] = None
@@ -25,6 +31,8 @@ class DealerUpdate(BaseModel):
     note: Annotated[str | None, Field(description="Custom note")] = None
 
 
-class DealerRead(DealerBase):
+class CounterpartyRead(CounterpartyBase):
+    """Schema for reading counterparty data with ID and user_id."""
+
     id: int
     user_id: int

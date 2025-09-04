@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from .user import User
 
 
-class Dealer(Base, IdIntPkMixin):
-    __tablename__ = "dealers"
+class Counterparty(Base, IdIntPkMixin):
+    __tablename__ = "counterparties"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
