@@ -49,6 +49,16 @@ class TransactionStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class TransactionType(StrEnum):
+    """Type of transaction."""
+
+    PURCHASE = "purchase"
+    SALE = "sale"
+    LOSS = "loss"
+    GIFT = "gift"
+    DAMAGE = "damage"
+    THEFT = "theft"
+
 
 class ImageType(StrEnum):
     """Image type for item images."""
