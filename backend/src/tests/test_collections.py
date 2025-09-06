@@ -813,3 +813,314 @@ class TestCollectionsWorkflows:
         assert len(collection1_get.json()["items"]) == 0
         assert len(collection2_get.json()["items"]) == 1
         assert collection2_get.json()["items"][0]["id"] == item["id"]
+
+class TestCollectionHierarchy:
+    """Test collection hierarchy functionality."""
+
+    def test_create_subcollection(self, authenticated_client, test_user):
+        """Test creating a subcollection under a parent collection."""
+        parent_data = {
+            "name": "Parent Collection",
+            "description": "Parent collection for testing",
+        }
+        
+        response = authenticated_client.post("/api/collections/", json=parent_data)
+        assert response.status_code == 201
+        parent_collection = response.json()
+        parent_id = parent_collection["id"]
+
+        subcollection_data = {
+            "name": "Subcollection",
+            "description": "A subcollection for testing",
+        }
+        
+        response = authenticated_client.post(
+            f"/api/collections/{parent_id}/subcollections", json=subcollection_data
+        )
+        assert response.status_code == 201
+        subcollection = response.json()
+        
+        assert subcollection["name"] == "Subcollection"
+        assert subcollection["parent_id"] == parent_id
+        assert subcollection["user_id"] == test_user.id
+
+    def test_leaf_collection_constraint(self, authenticated_client, test_user, test_grading_companies):
+        """Test that items can only be added to leaf collections."""
+
+        company = test_grading_companies[0]
+        item_data = {
+            "name": "Test Coin",
+            "description": "A test coin",
+            "country": "USA",
+            "year": "2020",
+            "denomination": "1 Dollar",
+            "metal": "Silver",
+            "material": "silver",
+            "purchase_price": 10000,
+            "grading_company_id": company.id,
+            "certificate_number": "TEST12345",
+        }
+        
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == 201
+        item = response.json()
+        item_id = item["id"]
+
+        parent_data = {"name": "Parent", "description": "Parent collection"}
+        response = authenticated_client.post("/api/collections/", json=parent_data)
+        parent = response.json()
+        parent_id = parent["id"]
+
+        subcollection_data = {"name": "Subcollection", "description": "Test subcollection"}
+        response = authenticated_client.post(
+            f"/api/collections/{parent_id}/subcollections", json=subcollection_data
+        )
+        subcollection = response.json()
+        subcollection_id = subcollection["id"]
+
+        add_item_data = {"item_id": item_id}
+        response = authenticated_client.post(
+            f"/api/collections/{parent_id}/items", json=add_item_data
+        )
+        assert response.status_code == 400
+        assert "leaf collections" in response.json()["detail"]
+
+        response = authenticated_client.post(
+            f"/api/collections/{subcollection_id}/items", json=add_item_data
+        )
+        assert response.status_code == 204
+
+    def test_get_collection_tree(self, authenticated_client, test_user):
+        """Test getting a collection tree structure."""
+
+        root_data = {"name": "Root Collection", "description": "Root level"}
+        response = authenticated_client.post("/api/collections/", json=root_data)
+        assert response.status_code == 201
+        root = response.json()
+        root_id = root["id"]
+
+        subcoll_data = {"name": "Subcollection", "description": "Child collection"}
+        response = authenticated_client.post(f"/api/collections/{root_id}/subcollections", json=subcoll_data)
+        assert response.status_code == 201
+
+        response = authenticated_client.get(f"/api/collections/{root_id}/tree")
+        assert response.status_code == 200
+        tree = response.json()
+        
+        assert tree["id"] == root_id
+        assert tree["name"] == "Root Collection"
+        assert tree["is_root"] == True
+        assert tree["is_leaf"] == False
+        assert len(tree["children"]) == 1
+        assert tree["children"][0]["name"] == "Subcollection"
+        assert tree["children"][0]["is_leaf"] == True
+
+    def test_get_all_collections_tree(self, authenticated_client, test_user):
+        """Test getting all root collections with their trees."""
+        root1_data = {"name": "Root1", "description": "First root"}
+        root2_data = {"name": "Root2", "description": "Second root"}
+        
+        response1 = authenticated_client.post("/api/collections/", json=root1_data)
+        response2 = authenticated_client.post("/api/collections/", json=root2_data)
+        
+        assert response1.status_code == 201
+        assert response2.status_code == 201
+        
+        root1 = response1.json()
+        root2 = response2.json()
+
+        subcoll_data = {"name": "Subcollection", "description": "Child of root1"}
+        response = authenticated_client.post(f"/api/collections/{root1['id']}/subcollections", json=subcoll_data)
+        assert response.status_code == 201
+
+        response = authenticated_client.get("/api/collections/tree")
+        assert response.status_code == 200
+        trees = response.json()
+        
+        assert len(trees) == 2
+
+        root1_tree = next((t for t in trees if t["id"] == root1["id"]), None)
+        assert root1_tree is not None
+        assert len(root1_tree["children"]) == 1
+
+    def test_get_collection_path(self, authenticated_client, test_user):
+        """Test getting the path from root to a collection."""
+
+        parent_data = {"name": "Parent Collection", "description": "Parent"}
+        response = authenticated_client.post("/api/collections/", json=parent_data)
+        parent = response.json()
+        parent_id = parent["id"]
+
+        subcollection_data = {"name": "Subcollection", "description": "Child"}
+        response = authenticated_client.post(f"/api/collections/{parent_id}/subcollections", json=subcollection_data)
+        subcollection = response.json()
+        subcollection_id = subcollection["id"]
+
+        response = authenticated_client.get(f"/api/collections/{subcollection_id}/path")
+        assert response.status_code == 200
+        path_data = response.json()
+        path = path_data["path"]
+        
+        assert len(path) == 2
+        assert path[0]["id"] == parent_id
+        assert path[0]["name"] == "Parent Collection"
+        assert path[1]["id"] == subcollection_id
+        assert path[1]["name"] == "Subcollection"
+
+    def test_move_collection(self, authenticated_client, test_user):
+        """Test moving a collection to a new parent."""
+
+        root1_data = {"name": "Root1", "description": "First root"}
+        root2_data = {"name": "Root2", "description": "Second root"}
+        
+        root1_response = authenticated_client.post("/api/collections/", json=root1_data)
+        root2_response = authenticated_client.post("/api/collections/", json=root2_data)
+        
+        root1 = root1_response.json()
+        root2 = root2_response.json()
+        root1_id = root1["id"]
+        root2_id = root2["id"]
+
+        subcoll_data = {"name": "Subcollection", "description": "Moving collection"}
+        subcoll_response = authenticated_client.post(f"/api/collections/{root1_id}/subcollections", json=subcoll_data)
+        subcollection = subcoll_response.json()
+        subcollection_id = subcollection["id"]
+
+        move_data = {"new_parent_id": root2_id}
+        response = authenticated_client.put(f"/api/collections/{subcollection_id}/move", json=move_data)
+        assert response.status_code == 200
+        moved_collection = response.json()
+        
+        assert moved_collection["parent_id"] == root2_id
+
+        move_data = {"new_parent_id": None}
+        response = authenticated_client.put(f"/api/collections/{subcollection_id}/move", json=move_data)
+        assert response.status_code == 200
+        moved_collection = response.json()
+        
+        assert moved_collection["parent_id"] is None
+
+    def test_cycle_prevention(self, authenticated_client, test_user):
+        """Test that circular dependencies are prevented."""
+
+        collections = []
+        parent_id = None
+        
+        for i, name in enumerate(["A", "B", "C"]):
+            if parent_id:
+                response = authenticated_client.post(f"/api/collections/{parent_id}/subcollections", 
+                                                   json={"name": name, "description": f"Collection {name}"})
+            else:
+                response = authenticated_client.post("/api/collections/", 
+                                                   json={"name": name, "description": f"Collection {name}"})
+            
+            assert response.status_code == 201
+            collection = response.json()
+            collections.append(collection)
+            parent_id = collection["id"]
+
+        move_data = {"new_parent_id": collections[2]["id"]}  # C
+        response = authenticated_client.put(f"/api/collections/{collections[0]['id']}/move", json=move_data)
+        assert response.status_code == 400
+        assert "circular dependency" in response.json()["detail"]
+ 
+        move_data = {"new_parent_id": collections[2]["id"]}  # C
+        response = authenticated_client.put(f"/api/collections/{collections[1]['id']}/move", json=move_data)
+        assert response.status_code == 400
+
+    def test_complete_hierarchy_workflow(self, authenticated_client, test_user, test_grading_companies):
+        """Test complete hierarchy workflow with multiple levels."""
+
+        root_data = {"name": "Root Collection", "description": "Root level"}
+        response = authenticated_client.post("/api/collections/", json=root_data)
+        assert response.status_code == 201
+        root = response.json()
+        root_id = root["id"]
+
+        level1_collections = []
+        for i in range(2):
+            subcoll_data = {"name": f"Level1-{i}", "description": f"First level subcollection {i}"}
+            response = authenticated_client.post(f"/api/collections/{root_id}/subcollections", json=subcoll_data)
+            assert response.status_code == 201
+            level1_collections.append(response.json())
+
+        level2_collections = []
+        parent_l1_id = level1_collections[0]["id"]
+        for i in range(2):
+            subcoll_data = {"name": f"Level2-{i}", "description": f"Second level subcollection {i}"}
+            response = authenticated_client.post(f"/api/collections/{parent_l1_id}/subcollections", json=subcoll_data)
+            assert response.status_code == 201
+            level2_collections.append(response.json())
+
+        company = test_grading_companies[0]
+        item_data = {
+            "name": "Test Coin",
+            "description": "A test coin for hierarchy",
+            "country": "USA",
+            "year": "2020",
+            "denomination": "1 Dollar",
+            "metal": "Silver",
+            "material": "silver",
+            "purchase_price": 10000,
+            "grading_company_id": company.id,
+            "certificate_number": "TEST12345",
+        }
+        response = authenticated_client.post("/api/items/", json=item_data)
+        assert response.status_code == 201
+        item = response.json()
+        item_id = item["id"]
+
+        add_item_data = {"item_id": item_id}
+        response = authenticated_client.post(f"/api/collections/{root_id}/items", json=add_item_data)
+        assert response.status_code == 400
+        assert "leaf collections" in response.json()["detail"]
+
+        response = authenticated_client.post(f"/api/collections/{parent_l1_id}/items", json=add_item_data)
+        assert response.status_code == 400
+
+        leaf_id = level2_collections[0]["id"]
+        response = authenticated_client.post(f"/api/collections/{leaf_id}/items", json=add_item_data)
+        assert response.status_code == 204
+
+        response = authenticated_client.get(f"/api/collections/{root_id}/tree")
+        assert response.status_code == 200
+        tree = response.json()
+        
+        assert tree["id"] == root_id
+        assert tree["name"] == "Root Collection"
+        assert tree["is_root"] == True
+        assert tree["is_leaf"] == False
+        assert len(tree["children"]) == 2
+
+        level1_in_tree = tree["children"][0]
+        assert level1_in_tree["is_leaf"] == False
+        assert len(level1_in_tree["children"]) == 2
+
+        level2_in_tree = level1_in_tree["children"][0]
+        assert level2_in_tree["is_leaf"] == True
+        assert level2_in_tree["direct_items_count"] == 1
+        assert len(level2_in_tree["children"]) == 0
+
+        response = authenticated_client.get(f"/api/collections/{leaf_id}/path")
+        assert response.status_code == 200
+        path = response.json()["path"]
+        
+        assert len(path) == 3
+        assert path[0]["id"] == root_id
+        assert path[1]["id"] == parent_l1_id
+        assert path[2]["id"] == leaf_id
+
+        move_target_id = level1_collections[1]["id"]
+        move_destination_id = level2_collections[1]["id"]
+        
+        move_data = {"new_parent_id": move_destination_id}
+        response = authenticated_client.put(f"/api/collections/{move_target_id}/move", json=move_data)
+        assert response.status_code == 200
+        moved = response.json()
+        assert moved["parent_id"] == move_destination_id
+
+        response = authenticated_client.get("/api/collections/tree")
+        assert response.status_code == 200
+        trees = response.json()
+        assert len(trees) == 1
+        assert trees[0]["id"] == root_id
