@@ -11,8 +11,8 @@ from .base import Base
 from .mixins.uuid_pk import UuidPkMixin
 
 if TYPE_CHECKING:
-    from .collection import Collection
     from .counterparty import Counterparty
+    from .transaction_collection import TransactionCollection
     from .transaction_item import TransactionItem
     from .user import User
 
@@ -50,12 +50,13 @@ class Transaction(Base, UuidPkMixin):
     # Foreign keys
     user_id: Mapped[UserIdType] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     counterparty_id: Mapped[int] = mapped_column(ForeignKey("counterparties.id"), nullable=False, index=True)
-    collection_id: Mapped[str | None] = mapped_column(ForeignKey("collections.id"), nullable=True, index=True)
 
     # Relationships
     user: Mapped["User"] = relationship("User", lazy="select")
     counterparty: Mapped["Counterparty"] = relationship("Counterparty", lazy="select")
-    collection: Mapped["Collection | None"] = relationship("Collection", lazy="select")
     transaction_items: Mapped[list["TransactionItem"]] = relationship(
         "TransactionItem", back_populates="transaction", cascade="all, delete-orphan"
+    )
+    transaction_collections: Mapped[list["TransactionCollection"]] = relationship(
+        "TransactionCollection", back_populates="transaction", cascade="all, delete-orphan"
     )
