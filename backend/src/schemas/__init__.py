@@ -51,6 +51,12 @@ from .transaction import (
     TransactionRead,
     TransactionUpdate,
 )
+from .transaction_collection import (
+    TransactionCollectionBase,
+    TransactionCollectionCreate,
+    TransactionCollectionRead,
+    TransactionCollectionUpdate,
+)
 from .transaction_item import (
     TransactionItemBase,
     TransactionItemCreate,
@@ -111,6 +117,11 @@ __all__ = [
     "TransactionCreate",
     "TransactionUpdate",
     "TransactionRead",
+    # Transaction collection schemas
+    "TransactionCollectionBase",
+    "TransactionCollectionCreate",
+    "TransactionCollectionUpdate",
+    "TransactionCollectionRead",
     # Transaction item schemas
     "TransactionItemBase",
     "TransactionItemCreate",

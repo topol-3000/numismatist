@@ -39,9 +39,7 @@ class Transaction(Base, UuidPkMixin):
     transaction_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    total_amount: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, comment="Total amount in pennies/cents"
-    )
+    total_amount: Mapped[int] = mapped_column(BigInteger, nullable=False, comment="Total amount in pennies/cents")
     currency: Mapped[Currency] = mapped_column(
         Enum(Currency, validate_strings=True), nullable=False, default=Currency.USD
     )

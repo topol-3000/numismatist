@@ -380,15 +380,29 @@ async def create_subcollection(
     session: SessionDependency,
     current_user: User = Depends(current_active_user),
 ):
-    """Create a subcollection under the specified parent collection."""
+    """
+    Create a subcollection under the specified parent collection.
+
+    WARNING: Creating a subcollection will automatically remove all items
+    from the parent collection, as items can only exist in leaf collections.
+    """
 
     parent_result = await session.execute(
-        select(Collection).where(Collection.id == parent_id, Collection.user_id == current_user.id)
+        select(Collection)
+        .options(selectinload(Collection.items))
+        .where(Collection.id == parent_id, Collection.user_id == current_user.id)
     )
     parent_collection = parent_result.scalar_one_or_none()
 
     if not parent_collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent collection not found")
+
+    # Clear all items from parent collection before creating subcollection
+    # Items can only exist in leaf collections
+    if parent_collection.items:
+        for item in parent_collection.items:
+            item.collection_id = None
+        # Note: You might want to log this action or notify the user
 
     collection_dict = collection_data.model_dump()
     collection_dict["parent_id"] = parent_id

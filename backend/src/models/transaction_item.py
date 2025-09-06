@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .item import Item
     from .item_price_history import ItemPriceHistory
     from .transaction import Transaction
+    from .transaction_collection import TransactionCollection
 
 
 class TransactionItem(Base, IdIntPkMixin):
@@ -34,10 +35,16 @@ class TransactionItem(Base, IdIntPkMixin):
     # Foreign keys
     transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False, index=True)
     item_id: Mapped[str] = mapped_column(ForeignKey("items.id"), nullable=False, index=True)
+    transaction_collection_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transaction_collections.id"), nullable=True, index=True
+    )
 
     # Relationships
     transaction: Mapped["Transaction"] = relationship("Transaction", lazy="select")
     item: Mapped["Item"] = relationship("Item", lazy="select")
+    transaction_collection: Mapped["TransactionCollection | None"] = relationship(
+        "TransactionCollection", back_populates="transaction_items", lazy="select"
+    )
     price_history: Mapped[list["ItemPriceHistory"]] = relationship(
         "ItemPriceHistory", back_populates="transaction_item"
     )
