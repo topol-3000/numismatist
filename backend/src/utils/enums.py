@@ -21,6 +21,43 @@ class PriceType(StrEnum):
 
     PURCHASE = "purchase"
     CURRENT = "current"
+    SALE = "sale"
+    COLLECTION_PURCHASE = "collection_purchase"
+    COLLECTION_SALE = "collection_sale"
+
+
+class CounterpartyRole(StrEnum):
+    """Role of counterparty in transactions."""
+
+    SELLER = "seller"
+    BUYER = "buyer"
+    BOTH = "dealer"
+
+
+class Currency(StrEnum):
+    """Currency types for transactions."""
+
+    USD = "usd"
+    EUR = "eur"
+
+
+class TransactionStatus(StrEnum):
+    """Status of transaction."""
+
+    PENDING = "pending"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class TransactionType(StrEnum):
+    """Type of transaction."""
+
+    PURCHASE = "purchase"
+    SALE = "sale"
+    LOSS = "loss"
+    GIFT = "gift"
+    DAMAGE = "damage"
+    THEFT = "theft"
 
 
 class ImageType(StrEnum):

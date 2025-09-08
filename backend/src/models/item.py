@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .grading_info import GradingInfo
     from .item_image import ItemImage
     from .item_price_history import ItemPriceHistory
+    from .transaction_item import TransactionItem
     from .user import User
 
 
@@ -50,4 +51,7 @@ class Item(Base, UuidPkMixin):
         back_populates="item",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    transaction_items: Mapped[list["TransactionItem"]] = relationship(
+        "TransactionItem", back_populates="item", cascade="all, delete-orphan"
     )

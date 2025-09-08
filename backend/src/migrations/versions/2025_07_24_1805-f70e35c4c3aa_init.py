@@ -51,8 +51,9 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id', name=op.f('pk_collections')),
     sa.UniqueConstraint('share_token', name=op.f('uq_collections_share_token'))
     )
-    op.create_table('dealers',
+    op.create_table('counterparties',
     sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.Enum('SELLER', 'BUYER', 'BOTH', name='counterpartyrole'), nullable=False, server_default='BOTH'),
     sa.Column('email', sa.String(length=255), nullable=True),
     sa.Column('phone', sa.String(length=50), nullable=True),
     sa.Column('address', sa.String(length=255), nullable=True),
@@ -60,8 +61,8 @@ def upgrade() -> None:
     sa.Column('note', sa.String(length=255), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_dealers_user_id_users')),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_dealers'))
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_counterparties_user_id_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_counterparties'))
     )
     op.create_table('items',
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -112,7 +113,7 @@ def downgrade() -> None:
     op.drop_index('idx_unique_front_back_per_item', table_name='item_images', postgresql_where="type IN ('FRONT', 'BACK')")
     op.drop_table('item_images')
     op.drop_table('items')
-    op.drop_table('dealers')
+    op.drop_table('counterparties')
     op.drop_table('collections')
     op.drop_index(op.f('ix_access_tokens_created_at'), table_name='access_tokens')
     op.drop_table('access_tokens')
@@ -120,6 +121,7 @@ def downgrade() -> None:
     op.drop_table('users')
     
     # Drop custom enum types
+    op.execute('DROP TYPE IF EXISTS counterpartyrole')
     op.execute('DROP TYPE IF EXISTS pricetype')
     op.execute('DROP TYPE IF EXISTS imagetype')
     op.execute('DROP TYPE IF EXISTS material')

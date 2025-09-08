@@ -3,11 +3,21 @@ from .collection import (
     CollectionAddItem,
     CollectionBase,
     CollectionCreate,
+    CollectionDetailed,
+    CollectionMove,
+    CollectionPath,
     CollectionRead,
     CollectionRemoveItem,
+    CollectionTree,
     CollectionUpdate,
     CollectionWithItems,
     SharedCollectionRead,
+)
+from .counterparty import (
+    CounterpartyBase,
+    CounterpartyCreate,
+    CounterpartyRead,
+    CounterpartyUpdate,
 )
 from .grading_company import (
     GradingCompanyBase,
@@ -35,6 +45,24 @@ from .item_price_history import (
     ItemPriceHistoryRead,
     ItemPriceHistoryUpdate,
 )
+from .transaction import (
+    TransactionBase,
+    TransactionCreate,
+    TransactionRead,
+    TransactionUpdate,
+)
+from .transaction_collection import (
+    TransactionCollectionBase,
+    TransactionCollectionCreate,
+    TransactionCollectionRead,
+    TransactionCollectionUpdate,
+)
+from .transaction_item import (
+    TransactionItemBase,
+    TransactionItemCreate,
+    TransactionItemRead,
+    TransactionItemUpdate,
+)
 from .user import UserCreate, UserRead, UserRegisteredNotification, UserUpdate
 
 # Define what should be exported when using 'from schemas import *'
@@ -56,6 +84,11 @@ __all__ = [
     "ItemPriceHistoryCreate",
     "ItemPriceHistoryRead",
     "ItemPriceHistoryUpdate",
+    # Counterparty schemas
+    "CounterpartyBase",
+    "CounterpartyCreate",
+    "CounterpartyRead",
+    "CounterpartyUpdate",
     # Grading company schemas
     "GradingCompanyBase",
     "GradingCompanyCreate",
@@ -72,7 +105,26 @@ __all__ = [
     "CollectionUpdate",
     "CollectionRead",
     "CollectionWithItems",
+    "CollectionDetailed",
     "CollectionAddItem",
     "CollectionRemoveItem",
     "SharedCollectionRead",
+    "CollectionTree",
+    "CollectionPath",
+    "CollectionMove",
+    # Transaction schemas
+    "TransactionBase",
+    "TransactionCreate",
+    "TransactionUpdate",
+    "TransactionRead",
+    # Transaction collection schemas
+    "TransactionCollectionBase",
+    "TransactionCollectionCreate",
+    "TransactionCollectionUpdate",
+    "TransactionCollectionRead",
+    # Transaction item schemas
+    "TransactionItemBase",
+    "TransactionItemCreate",
+    "TransactionItemUpdate",
+    "TransactionItemRead",
 ]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Annotated
 
@@ -18,7 +20,7 @@ class CollectionBase(SchemaConfigMixin):
 class CollectionCreate(CollectionBase):
     """Schema for creating a new collection."""
 
-    pass
+    parent_id: Annotated[str | None, Field(description="ID of the parent collection")] = None
 
 
 class CollectionUpdate(SchemaConfigMixin):
@@ -26,6 +28,7 @@ class CollectionUpdate(SchemaConfigMixin):
 
     name: Annotated[str | None, Field(min_length=1, max_length=255, description="Collection name")] = None
     description: Annotated[str | None, Field(description="Collection description")] = None
+    parent_id: Annotated[str | None, Field(description="ID of the parent collection")] = None
 
 
 class CollectionRead(CollectionBase):
@@ -33,6 +36,7 @@ class CollectionRead(CollectionBase):
 
     id: str
     user_id: UserIdType
+    parent_id: Annotated[str | None, Field(description="ID of the parent collection")] = None
     share_token: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -45,6 +49,14 @@ class CollectionWithItems(CollectionRead):
         list[ItemRead],
         Field(default_factory=list, description="Items in the collection"),
     ]
+
+
+class CollectionDetailed(CollectionRead):
+    """Schema for collection with detailed hierarchy information."""
+
+    is_leaf: bool
+    is_root: bool
+    direct_items_count: int
 
 
 class CollectionAddItem(SchemaConfigMixin):
@@ -71,3 +83,27 @@ class SharedCollectionRead(SchemaConfigMixin):
     ]
     created_at: datetime
     updated_at: datetime
+
+
+class CollectionTree(CollectionDetailed):
+    """Schema for collection with its children included (tree structure)."""
+
+    children: Annotated[
+        list[CollectionTree],
+        Field(default_factory=list, description="Child collections"),
+    ]
+
+
+class CollectionPath(SchemaConfigMixin):
+    """Schema for collection path from root to current."""
+
+    path: Annotated[
+        list[CollectionRead],
+        Field(description="Path from root collection to current collection"),
+    ]
+
+
+class CollectionMove(SchemaConfigMixin):
+    """Schema for moving collection to new parent."""
+
+    new_parent_id: Annotated[str | None, Field(description="ID of the new parent collection (null for root)")] = None
